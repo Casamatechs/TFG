@@ -14,6 +14,15 @@
 #+LaTeX_HEADER: \usepackage[style=ieee, backend=biber]{biblatex} % Bibliografía en formato IEEE
 #+LaTeX_HEADER: \usepackage{sectsty}
 #+LaTeX_HEADER: \usepackage{portada}
+#+LaTeX_HEADER: \usepackage{listings}
+#+LaTeX_HEADER: \usepackage{xcolor}
+#+LaTeX_HEADER: \colorlet{punct}{red!60!black}
+#+LaTeX_HEADER: \definecolor{background}{HTML}{EEEEEE}
+#+LaTeX_HEADER: \definecolor{delim}{RGB}{20,105,176}
+#+LaTeX_HEADER: \colorlet{numb}{magenta!60!black}
+#+LaTeX_HEADER: \input{./lstJSON.tex}
+
+
 
 #+LaTeX_HEADER: \sectionfont{\MakeUppercase} % Las secciones deben estar en mayúsculas
 #+LaTeX_HEADER: \bibliography{\jobname}
@@ -60,18 +69,21 @@ En los últimos años el sector bancario ha visto como los pagos con tarjetas ha
 Según los datos ofrecidos por el Banco de España, desde 2002 hasta 2017 el número de operaciones creció
 un 245% y el importe de las operaciones un 188%, llegando a un gasto total de 135.246,47 millones de €
 en el 2017\cite{BancoEspana}.
-
+\\
+\\
 Este rápido incremento de las operaciones con tarjeta también se ha trasladado al entorno corporativo,
 generando nuevas necesidades para el control por parte de las empresas de las tarjetas que dan a sus
 empleados. Con el objetivo de cubrir esta necesidad, tanto Mastercard [fn:1] como Visa [fn:2] han
 implementado nuevas funcionalidades de control de tarjetas que permiten el control directo por parte
 de las empresas de sus tarjetas, de manera que se puedan recibir alertas de gasto o bloquear determinados tipos de pago.
-
+\\
+\\
 Este servicio es ofrecido a través de diversas API REST y en Vipera hemos implementado una aplicación que
 abstrae a los clientes finales (bancos y empresas) de las API proporcionadas por Visa y Mastercard,
 ofreciendo una API REST centralizada que simplifica las operaciones. Esta API interactúa con un servicio
 propietario de Vipera que integra toda la funcionalidad requerida por los distintos clientes finales.
-
+\\
+\\
 Los SDK desarrollados para la integración de nuestro servicio en las aplicaciones móviles de los clientes
 pretenden abstraer totalmente de las llamadas al servicio de manera que los desarrolladores tan solo
 vean funciones totalmente descriptivas sin tener que preocuparse de la configuración necesaria para la
@@ -97,15 +109,18 @@ móviles iPhone, iPad y iPod Touch. Fue presentado junto con el primer iPhone en
 principio Apple no iba a proporcionar SDK para desarrollo de aplicaciones nativas por parte de terceros,
 pero ante la reacción negativa de todos los desarrolladores, Apple reconsideró su decisión y terminó
 lanzando la primera versión del SDK en Marzo de 2008 junto a la segunda versión de iOS.
-
+\\
+\\
 El SDK originalmente proporcionaba un acceso muy limitado a las funciones del sistema operativo,
 además de tan solo proporcionar soporte para el lenguaje Objective-C[fn:7]. Año tras año Apple ha
 actualizado su sistema operativo móvil junto con el SDK aprovechando el lanzamiento de los nuevos iPhone.
-
+\\
+\\
 En 2014, Apple lanzó Swift[fn:8], un nuevo lenguaje más moderno que sustituyó a Objective-C como
 lenguaje de referencia para el desarrollo de aplicaciones iOS. No obstante, ambos lenguajes son actualmente
 soportados por el SDK de Apple, aunque la documentación tan solo es actualizada para Swift.
-
+\\
+\\
 [fn:6] https://apple.com/es/
 [fn:7] https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ProgrammingWithObjectiveC/Introduction/Introduction.html
 [fn:8] https://swift.org/
@@ -118,18 +133,19 @@ del desarrollo. Dos años más tarde, Google hizo público el primer SDK en fase
 para Android, que fue distribuido a desarrolladores y fabricantes de dispositivos
 móviles. No fue hasta septiembre de 2008 que se lanzó al mercado el primer dispositivo
 con Android.
-
+\\
+\\
 Las primeras versiones del SDK proporcionado por Google contaban tan solo con
 soporte para el lenguaje Java[fn:10]. Al contrario de su principal competidor, el código fuente
 de Android siempre ha sido open source[fn:11] lo que ha atraído a una gran cantidad de
 desarrolladores y fabricantes. De todos modos, la práctica totalidad de los fabricantes
 integran en sus terminales la versión de Android propietaria de Google, que incluye
 integración con las apps de Google bajo la capa Google Play Services[fn:12].
-
+\\
+\\
 En el evento Google I/O de 2017, Google anunció de manera oficial que se añadía un
-nuevo lenguaje soportado al SDK de Android [fn:13], Kotlin[fn:14] . Este lenguaje desarrollado
-por la empresa Jetbrains[fn:15] funciona sobre la Java Virtual Machine (JVM) de manera que
-es compatible con Java, por lo que es totalmente compatible con el código Java y puede
+nuevo lenguaje soportado al SDK de Android [fn:13], Kotlin[fn:14]. Este lenguaje desarrollado
+por la empresa Jetbrains[fn:15] funciona sobre la Java Virtual Machine, por lo que es totalmente compatible con el código Java y puede
 coexistir con este en una misma aplicación.
 [fn:9] https://www.android.com
 [fn:10] https://www.java.com
@@ -147,6 +163,8 @@ embebiendo una aplicación web dentro de una aplicación nativa para el sistema
 operativo deseado. Esta solución se acerca a la idea que tenía Apple de aplicaciones
 móviles en un principio, pero va más allá otorgando un sistema de plugins nativos que
 permiten la interacción con el sistema operativo.
+\\
+\\
 Los plugins proporcionan una implementación en código nativo (Objective-C para iOS
 y Java para Android) que será invocada por un wrapper escrito en Javascript[fn:19]. En
 tiempo de ejecución Cordova es capaz de saber sobre qué plataforma está ejecutándose
@@ -156,6 +174,76 @@ aplicaciones de esta gestión y facilita la escritura de código.
 [fn:17] https://phonegap.com/
 [fn:18] https://www.apache.org/
 [fn:19] https://developer.mozilla.org/bm/docs/Web/JavaScript
+** MOTIF
+El despliegue del lado del servidor de la aplicación bancaria con la que se ha operado
+para la realización de este trabajo está realizado sobre una plataforma propietaria propiedad
+de Vipera[fn:20] cuyo nombre comercial es MOTIF[fn:21].
+\\
+\\
+MOTIF es un servicio desarrollado en Java haciendo uso del framework OSGi[fn:22], creado en 1999
+como una primera aproximación al mundo de los microservicios en Java. En concreto, el desarrollo de MOTIF
+ha sido llevado a cabo empleando Apache Felix[fn:23] como implementación del framework OSGi. El uso de
+este framework facilita la integración con los clientes finales, por lo general banco y otros servicios
+financieros, ya que estos suelen emplear Java en sus propios servicios y la arquitectura OSGi permite una
+integración sencilla de diferentes módulos a los que se llama /plugins/ con el resto del sistema. En la [[fig:motif-core][figura 1]]
+se representan los servicios básicos implementados en el core de MOTIF.
+#+CAPTION: Diagrama de módulos predefinidos de MOTIF
+#+NAME: fig:motif-core
+[[./images/motif.jpg]]
+\\
+\\
+En el caso concreto de la aplicación para la que se ha implentado la solución desarrollada como trabajo
+fin de grado, se ha hecho uso de los plugins que conforman el core de MOTIF, además de distintos plugins que
+permiten la interacción con los servicios de Mastercard y VISA, así como plugins de persistencia de datos empleando
+la librería Hibernate[fn:24] y otros que implementan toda la lógica de negocio, que será explicada más adelante.
+\\
+\\
+Para realizar la conexión con MOTIF, por defecto existen 2 métodos distintos:
++ *API REST*: Está pensada para dar servicio a implementaciones de administracióndel sistema como podría ser un Help Desk.
++ *JSON Protocol*: Este método de conexión es el que se emplea en las soluciones móviles. Se basa en peticiones POST a un endpoint estático, el cual procesa la información enviada en la petición y determina el comportamiento que debe seguir el servidor.
+[fn:20] http://www.vipera.com/
+[fn:21] http://www.vipera.com/motif
+[fn:22] https://www.osgi.org/
+[fn:23] https://felix.apache.org/
+[fn:24] https://hibernate.org/
+
+** Modos de conexión con MOTIF
+*** Peticiones POST
+La forma más básica de hacer llamadas al endpoint JSON de MOTIF es la construcción de peticiones POST haciendo uso
+de aplicaciones como Postman[fn:25] o empleando directamente las librerías HTTP de los distintos lenguajes.
+El siguiente código es un ejemplo del cuerpo de una llamada a MOTIF.
+\\
+\begin{lstlisting}[language=json]
+{
+  "req" : {
+        "dom" : "{{domain}}",
+        "app" : "{{application}}",
+        "srv" : "{{service}}",
+        "op"  : "{{operation}}",
+        "header" :
+        {
+            "user":"user1@company1.com",
+            "otp":"123456",
+            "private:pwd":"1111",
+            "private:vpwd":"1111",
+            "email": "user1@company1.com"
+        }
+    }
+}
+\end{lstlisting}
+\\
+Como se puede apreciar, todos los campos de la llamada están encapsulados dentro del parámetro /req/, el cual
+es interceptado por el endpoint JSON de MOTIF. Una vez se ha interceptado la llamada, MOTIF comprueba los campos
+/dom/ (dominio al que se está llamando), /app/ (aplicación del dominio), /srv/ (servicio de la aplicación) y /op/
+(operación del servicio).
+\\
+\\
+Por último, en el campo /header/ se encontrarán contenidos los parametros requeridos por la operación. En este caso
+se trata de una llamada de ejemplo para la activación de usuarios, por lo que se pasan como parámetros el usuario,
+OTP (One Time Password), contraseña y su verificación y el email del usuario. Cabe destacar que los campos ligados a
+la contraseña tienen el prefijo /private/, el cual al ser detectado por MOTIF le indica que no debe quedar constancia
+en los logs de esos campos.
+[fn:25] https://www.getpostman.com/
 * Otra sección
 
 ** Una subsección
