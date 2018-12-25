@@ -1,4 +1,4 @@
-% Created 2018-12-23 dom 21:00
+% Created 2018-12-25 mar 19:40
 \documentclass[a4paper, 12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -23,13 +23,10 @@
 \usepackage[style=ieee, backend=biber]{biblatex} % Bibliografía en formato IEEE
 \usepackage{sectsty}
 \usepackage{portada}
-\usepackage{listings}
-\usepackage{xcolor}
-\colorlet{punct}{red!60!black}
-\definecolor{background}{HTML}{EEEEEE}
-\definecolor{delim}{RGB}{20,105,176}
-\colorlet{numb}{magenta!60!black}
-\input{./lstJSON.tex}
+\usepackage[newfloat]{minted}
+\usepackage{caption}
+\newenvironment{code}{\captionsetup{type=listing}}{}
+\SetupFloatingEnvironment{listing}{name=Fragmento de código}
 \sectionfont{\MakeUppercase} % Las secciones deben estar en mayúsculas
 \bibliography{\jobname}
 \Director{Fernando Pérez Costoya}
@@ -208,15 +205,17 @@ Para realizar la conexión con MOTIF, por defecto existen 2 métodos distintos:
 \item \textbf{JSON Protocol}: Este método de conexión es el que se emplea en las soluciones móviles. Se basa en peticiones POST a un endpoint estático, el cual procesa la información enviada en la petición y determina el comportamiento que debe seguir el servidor.
 \end{itemize}
 
-\subsection{Modos de conexión con MOTIF}
+\subsection{Modos de conexión con MOTIF desde una aplicación móvil}
 \label{sec-2-3}
 \subsubsection{Peticiones POST}
 \label{sec-2-3-1}
 La forma más básica de hacer llamadas al endpoint JSON de MOTIF es la construcción de peticiones POST haciendo uso
 de aplicaciones como Postman\footnote{\url{https://www.getpostman.com/}} o empleando directamente las librerías HTTP de los distintos lenguajes.
-El siguiente código es un ejemplo del cuerpo de una llamada a MOTIF.
+El siguiente \hyperref[code:jsonmotif]{JSON} es un ejemplo del cuerpo de una llamada a MOTIF.
 \\
-\begin{lstlisting}[language=json]
+\begin{code}
+\label{code:jsonmotif}
+\begin{minted}[linenos,tabsize=2,breaklines]{json}
 {
   "req" : {
         "dom" : "{{domain}}",
@@ -233,7 +232,10 @@ El siguiente código es un ejemplo del cuerpo de una llamada a MOTIF.
         }
     }
 }
-\end{lstlisting}
+\end{minted}
+\captionof{listing}{Cuerpo de una petición POST a MOTIF}
+\end{code}
+\bigbreak
 \\
 Como se puede apreciar, todos los campos de la llamada están encapsulados dentro del parámetro \emph{req}, el cual
 es interceptado por el endpoint JSON de MOTIF. Una vez se ha interceptado la llamada, MOTIF comprueba los campos
@@ -246,6 +248,46 @@ se trata de una llamada de ejemplo para la activación de usuarios, por lo que s
 OTP (One Time Password), contraseña y su verificación y el email del usuario. Cabe destacar que los campos ligados a
 la contraseña tienen el prefijo \emph{private}, el cual al ser detectado por MOTIF le indica que no debe quedar constancia
 en los logs de esos campos.
+\subsubsection{Motif Connector}
+\label{sec-2-3-2}
+Uno de los equipos de desarrollo de Italia implementó una librería para abstraer de ciertos detalles a los desarrolladores
+de las aplicaciones móviles que emplean como backend MOTIF. Esta librería fue implementada tanto en Objective-C para iOS
+como en Java para Android. También se implementó un plugin de Cordova para facilitar su uso en aplicaciones híbridas.
+\\
+\\
+En el siguiente \hyperref[code:motifconnector]{código} podemos observar como se compone la misma llamada a MOTIF expuesta en
+el apartado anterior empleando el plugin para Cordova. Podemos observar el campo \emph{header} sigue existiendo y siendo definido
+como un JSON, pero el usuario queda abstraido del formato del JSON que configura el dominio, aplicación, servicio y operación.
+\\
+\\
+Por último, se puede observar en la composición de la llamada al servidor que hay un campo booleano marcado como \emph{false}. Este
+campo determina si la llamada es segura, lo que implicaría la necesidad de que en la llamada incluya un ID de sesión para el
+usuario que la hace. El plugin implementa una función que guarda en la instancia este ID una vez el usuario se autentica con el
+servido. En este caso la llamada es de activación de un usuario, por lo que no se puede tener un ID de sesión.
+\begin{code}
+\label{code:motifconnector}
+\begin{minted}[linenos,tabsize=2,breaklines]{ts}
+let myHeader = {
+        "user":"user1@company1.com",
+        "otp":"123456",
+        "private:pwd":"1111",
+        "private:vpwd":"1111",
+        "email": "user1@company1.com"
+      };
+
+      let request: MotifRequest = this.motifClient.buildServerRequest("register", "activateUser", myHeader, false);
+
+      this.motifClient.sendRequest(request).then((res: MotifResponse) => {
+        /*Codigo a ejecutar en caso de exito*/
+      },(err) => {
+        /*Codigo a ejecutar en caso de error*/
+      });
+\end{minted}
+\captionof{listing}{Ejemplo de una llamada empleando el plugin Motif Connector}
+\end{code}
+\bigbreak
+Esta libreria es la que se emplea como base para todas las soluciones personalizadas ofrecidas por Vipera, incluyendo la solución
+expuesta en este documento.
 \section{Otra sección}
 \label{sec-3}
 
