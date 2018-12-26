@@ -2,6 +2,7 @@
 #+AUTHOR: Carlos Sánchez Marín
 #+DATE: Enero de 2019
 #+LANGUAGE: es
+#+OPTIONS: H:4
 #+OPTIONS: ^:{} toc:nil
 #+STARTUP: showall
 
@@ -18,6 +19,8 @@
 #+LaTeX_HEADER: \usepackage{caption}
 #+LaTeX_HEADER: \newenvironment{code}{\captionsetup{type=listing}}{}
 #+LaTeX_HEADER: \SetupFloatingEnvironment{listing}{name=Fragmento de código}
+#+LaTeX_HEADER: \setcounter{secnumdepth}{4}
+#+LaTeX_HEADER: \setcounter{tocdepth}{4}
 
 #+LaTeX_HEADER: \sectionfont{\MakeUppercase} % Las secciones deben estar en mayúsculas
 #+LaTeX_HEADER: \bibliography{\jobname}
@@ -287,11 +290,74 @@ let myHeader = {
 #+END_LaTeX
 Esta libreria es la que se emplea como base para todas las soluciones personalizadas ofrecidas por Vipera, incluyendo la solución
 expuesta en este documento.
-* Otra sección
-
-** Una subsección
+** Card Control
+En verano de 2017 se implementó un prototipo para Deutsche Bank en colaboración con Mastercard, que implementaba una solución parecida
+a la desarrollada para [[sec:smepay][SME Pay]], pero sin ofrecer la opción del control de tarjetas empresariales. Esta solución fue desplegada con éxito
+y ha sido usada como base de la lógica de negocio del proyecto SME Pay.
+* SME Pay
+<<sec:smepay>>
+La solución implementada forma parte del proyecto SME Pay[fn:26], un proyecto iniciado en colaboración con Mastercard para el control
+de gastos efectuado con tarjetas de empresa. En la actualidad el producto también ofrece la misma funcionalidad para tarjetas de VISA,
+siendo la gestión totalmente indiferente de cara al usuario, ya que las diferencias entre los distintos entornos son manejadas internamente
+por MOTIF.
+[fn:26] http://www.vipera.com/sme-pay-2/
+** Estructura de la aplicación
+En la actualidad SME Pay ofrece 2 areas diferenciadas claramente. Por un lado se proporciona la posibilidad de controlar tarjetas personales,
+que podrán ser añadidas y eliminadas de manera arbitraria por cada usuario y a las que ningún otro usuario que no sea el propietario podrá tener
+acceso. Por otro lado, los gestores de las empresas que adquieran el producto tendrán acceso desde su aplicación a un apartado diferenciado que
+permitirá controlar las tarjetas de la empresa. Para efectuar este control se han implementado distintos servicios que interactuan entre ellos
+tal y como se puede observar en la [[fig:sme-services][figura 2]].
+#+CAPTION: Servicios proporcionados por el JSON Endpoint de SME Pay
+#+NAME: fig:sme-services
+[[./images/smepay.png]]
+*** Servicio /register/
+El servicio register ofrece funcionalidades de activación, login y logout. Para efectuar un login se puede hacer tanto empleando el PIN elegido por el usuario como su huella dactilar en caso de que el
+dispositivo móvil permita, así como el uso de la tecnología de reconocimiento facial en los modelos de Apple que así lo permitan.
+*** Servicio /alert/
+El servicio alert gestiona la configuración de notificaciones de las tarjetas personales de cada usuario. Tal y como se puede observar en la [[fig:trx-alert][figura 3]]
+en este punto debemos diferenciar entre notificaciones de los servicios ofrecidos por Mastercard y VISA y las notificaciones push que manda SME Pay a
+los terminales móviles de los usuarios.
+\\
+\\
+Por un lado SME Pay configura todas las tarjetas registradas con Mastercard y VISA para recibir notificaciones de cualquier operación realizada. Sin embargo,
+los usuarios tienen la capacidad de configurar a través de este servicio que notificaciones push quieren recibir (retirada de dinero de un cajero, pagos online,
+operaciones por encima de un límite marcado...). De este modo el usuario tiene la libertad de gestionar las notificaciones que recibe en su dispositivo y al mismo
+tiempo el banco o empresa que contrata el servicio SME Pay tiene un registro accesible de todas las tarjetas registradas.
+#+CAPTION: Diagrama de funcionamiento de notificaciones en SME Pay
+#+NAME: fig:trx-alert
+[[./images/Trx-notification.png]]
+*** Servicio /control/
+El servicio control gestiona los bloqueos que se pueden establecer sobre las tarjetas personales de cada usuario.
+*** Servicio /cardinfo/
+El servicio cardinfo ofrece funcionalidades de registro, activacion, desactivación y eliminación de tarjetas, así como también facilita las tarjetas registradas
+por el usuario y sus transacciones asociadas almacenadas en los servidores de SME Pay.
+*** Servicio /smeprofiling/
+El servicio smeprofiling es el principal del producto SME Pay. Este proporciona las mismas funcionalidades que los servicios /alert/,/control/ y /cardinfo/ añadiendo toda la lógica de negocio necesaria
+para permitir la gestión de las tarjetas de empresa tanto por los usuarios que las tienen asignadas, como por los gestores. En SME Pay se diferencia entre 3 tipos de usuarios: [[sec:bsowner][Business owner]], [[sec:gadmin][Group Admin]]
+y [[sec:user][User]].
+**** Business Owner
+<<sec:bsowner>>
+El business owner es el usuario que tiene todos los permisos posibles dentro de la escala de privilegios establecida en SME Pay. Puede configurar las notificaciones push para las tarjetas
+de compañía de forma que le lleguen notificaciones de todas las tarjetas o notificaciones de tarjetas de grupos concretos.
+\\
+\\
+Respecto a los distintos bloqueos que pueden realizarse sobre las tarjetas, también puede establecer un bloqueo sobre todas las tarjetas de la compañía o sobre las tarjetas de un grupo concreto. Cuando
+establece estos bloqueos, todas las tarjetas afectadas deshabilitan la gestión de dicho bloqueo al resto de usuarios.
+**** Group Admin
+<<sec:gadmin>>
+El business owner puede establecer un group admin para cada uno de los grupos que decida crear. Estos group admin podrán configurar las notificaciones push para las tarjetas de su propio grupo.
+Por otro lado, también tendrán la capacidad de establacer bloqueos en las tarjetas del grupo siempre y cuando el business owner no lo haya hecho antes.
+**** User
+<<sec:user>>
+Todos los usuarios de SME Pay tiene por defecto privilegios de user. Pueden configurar notificaciones para la tarjeta de compañía que les ha sido asignada y bloqueos, siempre y cuando no hayan sido
+establecidos por el business owner o el group admin.
 
 ** Otra subsección
+
+* Desarrollo de la solución
+** Desarrollo de la librería para Android
+** Desarrollo de la libreria para iOS
+** Desarrollo del plugin para Cordova
 
 * Resultados y conclusiones
 
