@@ -18,9 +18,11 @@
 #+LaTeX_HEADER: \usepackage[newfloat]{minted}
 #+LaTeX_HEADER: \usepackage{caption}
 #+LaTeX_HEADER: \newenvironment{code}{\captionsetup{type=listing}}{}
-#+LaTeX_HEADER: \SetupFloatingEnvironment{listing}{name=Fragmento de código}
+#+LaTeX_HEADER: \SetupFloatingEnvironment{listing}{name={Fragmento de código},fileext=lol}
 #+LaTeX_HEADER: \setcounter{secnumdepth}{4}
 #+LaTeX_HEADER: \setcounter{tocdepth}{4}
+#+LaTeX_HEADER: \usepackage[titles]{tocloft}
+#+LaTeX_HEADER: \newlistof{listing}{lol}{Índice de ejemplos de código}
 
 #+LaTeX_HEADER: \sectionfont{\MakeUppercase} % Las secciones deben estar en mayúsculas
 #+LaTeX_HEADER: \bibliography{\jobname}
@@ -34,12 +36,13 @@
 \null
 \newpage
 
-\pagenumbering{roman} % La numeración debe ser romana hasta la primera sección
+\pagenumbering{roman}
 \tableofcontents
 \newpage
 
 \listoffigures
 \listoftables
+\listoflistings
 \newpage
 #+END_EXPORT
 
@@ -352,13 +355,154 @@ Por otro lado, también tendrán la capacidad de establacer bloqueos en las tarj
 Todos los usuarios de SME Pay tiene por defecto privilegios de user. Pueden configurar notificaciones para la tarjeta de compañía que les ha sido asignada y bloqueos, siempre y cuando no hayan sido
 establecidos por el business owner o el group admin.
 
-** Otra subsección
+** Interacción con SME Pay
+*** Aplicación de Vipera
+Para la presentación del producto SME Pay en el Finovate London 2018[fn:27] se desarrolló un prototipo de aplicación móvil en Ionic que conectaba con el producto mediante llamadas HTTP realizadas directamente por
+el módulo http del core de Angular.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:angularhttp}
+\begin{minted}[linenos,tabsize=2,breaklines]{ts}
+let headers = new HttpHeaders();
+      headers = headers.set('Content-Type', 'application/json');
 
+        this.http.post(ENV.serverUrl, {
+          "req": {
+            "dom": ENV.domain,
+            "app": ENV.application,
+            "srv": "register",
+            "op": "activateUser",
+            "header": {
+              "user": this.regForm.value.user,
+              "email": this.regForm.value.email,
+              "otp": this.regForm.value.otp,
+              "private:pwd": this.regForm.value.password,
+              "private:vpwd": this.regForm.value.verify,
+            }
+          }
+        },
+        {headers: headers})
+        .subscribe(
+          res => {
+            if(res["res"]["header"]["err"] != undefined) {
+              /*Codigo a ejecutar en caso de error*/
+            } else {
+              /*Codigo a ejecutar en caso de exito*/
+            }
+          });
+\end{minted}
+\captionof{listing}{Llamada a la operación activation del servicio register empleando el cliente HTTP}
+\end{code}
+\bigbreak
+#+END_LaTeX
+Este método de conexión a pesar de ser completamente funcional, requería muchas lineas de código, lo que generaba un código muy denso y costoso de mantener. Por este motivo, tras el interes de
+diversos potenciales clientes se decidió integrar la librería MOTIF Connector, con lo que él código se reduce notablemente \hyperref[code:motifconnector]{(ver Fragmento de código 2)}.
+*** Integración en aplicaciones de terceros
+Dado que los potenciales clientes objetivo de SME Pay son bancos y PYMES, se decidió desarrollar unas librerías nativas para Android e iOS y adicionalmente un plugin de Cordova, con lo que se facilita
+a los clientes la integración del producto en sus aplicaciones móviles ya funcionales, con una abstracción total de la interacción con MOTIF.
+[fn:27] https://finovate.com/videos/finovateeurope-2018-vipera-mastercard/
 * Desarrollo de la solución
 ** Desarrollo de la librería para Android
-** Desarrollo de la libreria para iOS
-** Desarrollo del plugin para Cordova
+*** Estructura del proyecto
+El proyecto cuenta en su raiz con un fichero de configuracion para Gradle[fn:28], herramienta utilizada para construir la librería.
+\\
+El código se encuentra distribuido en 2 partes. Por un lado se implementan las clases que establecen la conexión con el servidor y tratan las respuestas. En el caso de Java, ya que este no contempla
+el uso de funciones de callback en la versión 1.7, se ha desarrollado para cada clase una interfaz asociada que será la que implemente cada función para emplearla de callback.
+#+BEGIN_LaTeX
+\bigbreak
+\begin{code}
+\label{code:androidcallback}
+\begin{minted}[linenos,tabsize=2,breaklines]{java}
+public interface RegisterServiceCallback<T> {
+    /**
+     * method invoked when an {@link IRegisterService} api is successfully done
+     * @param result api result
+     */
+    void onSuccess(T result);
 
+    /**
+     * method invoked when an {@link IRegisterService} api is done with an error
+     * @param error the error
+     */
+    void onError(IDEError error);
+}
+\end{minted}
+\captionof{listing}{Implementación de una interfaz de callback para el servicio register}
+\end{code}
+\bigbreak
+#+END_LaTeX
+Por otro lado, se encuentra el código encargado de serializar y deserializar las llamadas y respuestas del servidor.
+[fn:28] https://gradle.org/
+** Desarrollo de la libreria para iOS
+*** Estructura del proyecto
+El proyecto está estructurado en 2 partes. Por un lado se encuentra todo el código referente a los servicios de SME Pay, donde se establece la conexión con el servidor y se tratan las respuestas.
+\\
+Por otro lado, se encuentra el código encargado de serializar y deserializar las llamadas y respuestas del servidor.
+\\
+Por último, en la raiz del proyecto se encuentra el fichero ~DECardControl.h~, que expone todas las cabeceras públicas de la librería para posibilitar su uso por parte de los desarrolladores.
+** Desarrollo del plugin para Cordova
+*** Estructura del proyecto
+Un plugin para Cordova tiene una estructura definida que puede ser encontrada en su documentación online\cite{Cordova}. Tal y como se indica, en la raiz del proyecto existe el fichero \hyperref[code:pluginxml]{plugin.xml},
+el cual proporciona información acerca del plugin (nombre, versionado, licencia...) y su composición interna. Este archivo es crucial ya que es el que lee Cordova al realizar la instalación de un plugin,
+con lo que un error puede provocar un mal funcionamiento del plugin.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:pluginxml}
+\begin{minted}[linenos,tabsize=2,breaklines]{xml}
+<plugin id="de-smepay-plugin" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+  <name>SMEPayConnector</name>
+
+  <platform name="android">
+
+    ...
+
+    <source-file src="src/android/CardControlPlugin.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <source-file src="src/android/AlertServicePlugin.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <source-file src="src/android/CardInfoServicePlugin.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <source-file src="src/android/ControlServicePlugin.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <source-file src="src/android/LoginServicePlugin.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <source-file src="src/android/VirtualCardServicePlugin.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <source-file src="src/android/CardControlServicesProvider.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <source-file src="src/android/SMEProfilingServicePlugin.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <source-file src="src/android/Encode.java" target-dir="src/com/vipera/cardcontrolplugin" />
+    <framework custom="true" src="src/android/SMEPay.gradle" type="gradleReference" />
+
+  </platform>
+
+
+  <platform name="ios">
+
+    ...
+
+    <framework src="src/ios/SMEPay.framework" custom="true" embed="true"/>
+
+    <header-file src="src/ios/AlertServicePlugin.h" />
+    <source-file src="src/ios/AlertServicePlugin.m" />
+    <header-file src="src/ios/CardControlPlugin.h" />
+    <source-file src="src/ios/CardControlPlugin.m" />
+    <header-file src="src/ios/CardInfoServicePlugin.h" />
+    <source-file src="src/ios/CardInfoServicePlugin.m" />
+    <header-file src="src/ios/ControlServicePlugin.h" />
+    <source-file src="src/ios/ControlServicePlugin.m" />
+    <header-file src="src/ios/LoginServicePlugin.h" />
+    <source-file src="src/ios/LoginServicePlugin.m" />
+    <header-file src="src/ios/SmeProfilingServicePlugin.h" />
+    <source-file src="src/ios/SmeProfilingServicePlugin.m" />
+    <header-file src="src/ios/CardControlConfig.h" />
+    <source-file src="src/ios/CardControlConfig.m" />
+    <header-file src="src/ios/MotifConnectorConfiguration.h" />
+    <source-file src="src/ios/MotifConnectorConfiguration.m" />
+
+  </platform>
+
+</plugin>
+\end{minted}
+\captionof{listing}{Código parcial del fichero plugin.xml del plugin}
+\end{code}
+\bigbreak
+#+END_LaTeX
+Como se puede observar en el código, cada plataforma para la que se ofrece soporte se configura de manera explicita, indicando los ficheros y su ubicación. Estos ficheros realizan llamadas a las librerías
+nativas desarrolladas, y son invocados por Cordova cuando la aplicación hace llamadas a la interfaz Javascript que proporciona el plugin.
 * Resultados y conclusiones
 
 ** Pruebas
