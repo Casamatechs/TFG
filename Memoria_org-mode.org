@@ -440,6 +440,228 @@ El proyecto está estructurado en 2 partes. Por un lado se encuentra todo el có
 Por otro lado, se encuentra el código encargado de serializar y deserializar las llamadas y respuestas del servidor.
 \\
 Por último, en la raiz del proyecto se encuentra el fichero ~DECardControl.h~, que expone todas las cabeceras públicas de la librería para posibilitar su uso por parte de los desarrolladores.
+*** Serialización y deserialización
+Debido a que Objective-C no ofrece soporte nativo para JSON, se necesita implementar clases que se encarguen de serializar y deserializar. Esto se consigue empleando la estructura de datos ~NSDictionay~
+que como su nombre indica es un diccionario.
+\\
+\\
+La estructura de estas clases es muy sencillo, tan solo tienen un constructor al que se le pasan todos los parametros a serializar y dos métodos, para serializar y deserializar. También se tiene que definir
+estáticamente el nombre de los campos del JSON, de forma que estos se usen como las /key/ del diccionario.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:ios-serializer}
+\begin{minted}[linenos,tabsize=2,breaklines]{obj-c}
+//
+//  DEActivateUserRequest.m
+//  DECardControl
+//
+//  Created by SME Project Team on 03/10/18.
+//  Copyright © 2018 Vipera. All rights reserved.
+//
+
+#import "DEActivateUserRequest.h"
+
+#define DE_ACTIVATE_REQUEST_KEY_USER @"user"
+#define DE_ACTIVATE_REQUEST_KEY_EMAIL @"email"
+#define DE_ACTIVATE_REQUEST_KEY_OTP @"otp"
+#define DE_ACTIVATE_REQUEST_KEY_PASSWORD @"private:pwd"
+#define DE_ACTIVATE_REQUEST_KEY_VPASSWORD @"private:vpwd"
+
+@interface DEActivateUserRequest ()
+
+@property (nonatomic, strong, readwrite) NSString *userID;
+@property (nonatomic, strong, readwrite) NSString *email;
+@property (nonatomic, strong, readwrite) NSString *otp;
+@property (nonatomic, strong, readwrite) NSString *password;
+@property (nonatomic, strong, readwrite) NSString *vPassword;
+
+@end
+
+@implementation DEActivateUserRequest
+
++ (instancetype)initWithDictionary:(NSDictionary *)dictionary error:(NSError *__autoreleasing *)error
+{
+    NSString *userID = dictionary[DE_ACTIVATE_REQUEST_KEY_USER];
+    NSString *email = dictionary[DE_ACTIVATE_REQUEST_KEY_EMAIL];
+    NSString *otp = dictionary[DE_ACTIVATE_REQUEST_KEY_OTP];
+    NSString *password = dictionary[DE_ACTIVATE_REQUEST_KEY_PASSWORD];
+    NSString *vPassword = dictionary[DE_ACTIVATE_REQUEST_KEY_VPASSWORD];
+
+    return [[DEActivateUserRequest alloc] initWithUserID:userID email:email otp:otp password:password vPassword:vPassword];
+}
+
+- (instancetype) initWithUserID:(NSString *) userID
+                          email:(NSString *) email
+                            otp:(NSString *) otp
+                       password:(NSString *) password
+                      vPassword:(NSString *) vPassword
+{
+    self = [super init];
+
+    if (self)
+    {
+        self.userID = userID;
+        self.email = email;
+        self.otp = otp;
+        self.password = password;
+        self.vPassword = vPassword;
+    }
+
+    return self;
+}
+
+- (NSDictionary *)toDictionary:(NSError *__autoreleasing *)error
+{
+    NSMutableDictionary *resultDictionary = [NSMutableDictionary dictionary];
+
+    resultDictionary[DE_ACTIVATE_REQUEST_KEY_USER] = self.userID;
+    resultDictionary[DE_ACTIVATE_REQUEST_KEY_EMAIL] = self.email;
+    resultDictionary[DE_ACTIVATE_REQUEST_KEY_OTP] = self.otp;
+    resultDictionary[DE_ACTIVATE_REQUEST_KEY_PASSWORD] = self.password;
+    resultDictionary[DE_ACTIVATE_REQUEST_KEY_VPASSWORD] = self.vPassword;
+
+    return resultDictionary;
+}
+
+@end
+
+\end{minted}
+\captionof{listing}{Implementación de una clase de serialización/deserialización en Objective-C}
+\end{code}
+\bigbreak
+#+END_LaTeX
+*** Desarrollo de un servicio
+Para proceder a un desarrollo de una librería coherente con la estructura de SME Pay, se decidió diferenciar cada servicio de la misma forma. Así mismo, cada servicio contará con 3 ficheros.
+**** Interfaz del servicio
+Este fichero actuará como interfaz pública del servicio, proporcionando todos los métodos que proporciona el servicio, definiendo los tipos que empleará para el tratamiento de las respuestas y
+especificando que clases empleará para la serialización y deserialización de las llamadas y respuestas.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:ios-interface-partial}
+\begin{minted}[linenos,tabsize=2,breaklines]{obj-c}
+//
+//  IDELoginService.h
+//  DECardControl
+//
+//  Created by SME Project Team on 02/10/2018.
+//  Copyright © 2018 Vipera. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IDEError.h"
+
+@class DELoginRequest, DELoginResponse, DEActivateUserRequest, DEChangePwdRequest, DEEnableFingerprintRequest, DEEnableFingerprintResponse, DELoginFingerprintRequest;
+
+/**
+ * Block invoked when a IDELoginService method has been failed
+ **/
+typedef void(^DELoginServiceFailure)(id<IDEError> error);
+
+...
+
+/**
+ * Block invoked when the activateUser (@see -activateUserWithSuccess:successBlock :failureBlock) method was successful
+ **/
+typedef void (^DELoginServiceActivateUserSuccess)();
+
+...
+
+/**
+ *
+ *  @param successBlock The block invoked when the user activation has been successfully
+ *  @param failureBlock The block invoked when the user activation has been failed
+ */
+- (void) activateUserRequest:(DEActivateUserRequest*) activateRequest successBlock:(DELoginServiceActivateUserSuccess) successBlock failure:(DELoginServiceFailure) failureBlock;
+
+...
+
+\end{minted}
+\captionof{listing}{Implementación parcial de la interfaz del servicio register para la librería de iOS}
+\end{code}
+\bigbreak
+#+END_LaTeX
+Dado que la implementación completa es muy extensa, ha sido añadida en el \hyperref[code:ios-interface]{Anexo A}, dejando en esta parte del documento tan solo la implementación relativa a la llamada
+/activateUser/.
+**** Implementación del servicio
+Dado que Objective-C es un lenguaje basado en C, emplea la misma estructura para definir librerías. Por un lado se encuentra la cabecera que mantiene
+la extensión ~<file>.h~ y por otro la implementación, que en este caso si cambia su extensión a ~<file>.m~.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:ios-implementation}
+\begin{minted}[linenos,tabsize=2,breaklines]{obj-c}
+//
+//  DELoginService.m
+//  DECardControl
+//
+//  Created by SME Project Team on 02/10/2018.
+//  Copyright © 2018 Vipera. All rights reserved.
+//
+
+...
+
+#import "DEActivateUserRequest.h"
+
+...
+
+#import "DEMotifRequest.h"
+#import "DEMotifResponse.h"
+#import "DEError.h"
+
+...
+
+#define LOGIN_SERVICE_OP_ACTIVATE_USER @"activateUser"
+
+...
+
+@interface DELoginService ()
+
+@end
+
+@implementation DELoginService
+
+...
+
+- (void) activateUserRequest:(DEActivateUserRequest *)activateRequest successBlock:(DELoginServiceActivateUserSuccess)successBlock failure:(DELoginServiceFailure)failureBlock
+{
+    NSError *error = nil;
+    NSDictionary *activationDictionary = [activateRequest toDictionary:&error];
+
+    if (error)
+    {
+        failureBlock([DEError buildErrorWithError:error]);
+        return;
+    }
+
+    DEMotifRequest *request = [self.serverManager buildRequestForService:LOGIN_SERVICE operation:LOGIN_SERVICE_OP_ACTIVATE_USER isSecure:NO];
+
+    [request setHeader:activationDictionary];
+
+    [self.serverManager postRequest:request successBlock:^(DEMotifResponse *successResult, DEMotifRequest *serverRequest) {
+        successBlock();
+    } motifErroBlock:^(DEMotifResponse *failureResult, DEMotifRequest *motifRequest) {
+        failureBlock([DEError buildErrorWithMotifResponse:failureResult]);
+    } failureBlock:^(NSError *error, DEMotifRequest *motifRequest) {
+        failureBlock([DEError buildErrorWithError:error]);
+    }];
+}
+
+...
+
+@end
+
+\end{minted}
+\captionof{listing}{Código parcial de la implementación del servicio register para la librería de iOS}
+\end{code}
+\bigbreak
+#+END_LaTeX
+Debido a que el \hyperref[code:ios-implementation]{código} de la implementación de los servicios se proporciona compilado, tan solo se muestra la implementación de la llamada a la operación /activateUser/,
+para seguir el mismo ejemplo empleado durante el documento. Todas las llamadas siguen el mismo patrón de todos modos. En primer lugar se serializan los datos de la llamada a MOTIF, contemplando el caso en
+el que la serialización falle, de modo que se interrumpiría la ejecución. En caso de que la serialización se produzca con éxito, se realiza la llamada a MOTIF y se procesa la respuestá mediante el uso de
+funciones inline.
+\\
+\\
+En el caso de la operación /activateUser/ no se recibe ningún tipo de información que deba ser deserializada, pero en el caso de las operaciones en lo que esto si ocurre, se deserializa en en la función inline
+correspondiente al éxito de la llamada, y se devuelve el objeto deserializado dentro del método ~successBlock()~.
 ** Desarrollo del plugin para Cordova
 *** Estructura del proyecto
 Un plugin para Cordova tiene una estructura definida que puede ser encontrada en su documentación online\cite{Cordova}. Tal y como se indica, en la raiz del proyecto existe el fichero \hyperref[code:pluginxml]{plugin.xml},
@@ -451,6 +673,28 @@ con lo que un error puede provocar un mal funcionamiento del plugin.
 \begin{minted}[linenos,tabsize=2,breaklines]{xml}
 <plugin id="de-smepay-plugin" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
   <name>SMEPayConnector</name>
+
+  <js-module src="www/CardControl.js" name="CardControl">
+    <clobbers target="DynamicEngine.plugins.CardControl"/>
+  </js-module>
+  <js-module src="www/LoginService.js" name="LoginService">
+    <clobbers target="DynamicEngine.plugins.CardControl.LoginService"/>
+  </js-module>
+  <js-module src="www/CardInfoService.js" name="CardInfoService">
+    <clobbers target="DynamicEngine.plugins.CardControl.CardInfoService"/>
+  </js-module>
+  <js-module src="www/ControlService.js" name="ControlService">
+    <clobbers target="DynamicEngine.plugins.CardControl.ControlService"/>
+  </js-module>
+  <js-module src="www/AlertService.js" name="AlertService">
+    <clobbers target="DynamicEngine.plugins.CardControl.AlertService"/>
+  </js-module>
+  <js-module src="www/VirtualCardService.js" name="VirtualCardService">
+    <clobbers target="DynamicEngine.plugins.CardControl.VirtualCardService"/>
+  </js-module>
+  <js-module src="www/SMEProfilingService.js" name="SMEProfilingService">
+    <clobbers target="DynamicEngine.plugins.CardControl.SMEProfilingService"/>
+  </js-module>
 
   <platform name="android">
 
@@ -510,3 +754,167 @@ nativas desarrolladas, y son invocados por Cordova cuando la aplicación hace ll
 ** Conclusiones
 
 #+LaTeX: \printbibliography[heading=bibnumbered] % Última sección, numerada, para la bibliografía
+
+* ANEXO A - Código
+** Interfaz del servicio register para iOS
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:ios-interface}
+\begin{minted}[linenos,tabsize=2,breaklines]{obj-c}
+//
+//  IDELoginService.h
+//  DECardControl
+//
+//  Created by SME Project Team on 02/10/2018.
+//  Copyright © 2018 Vipera. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IDEError.h"
+
+@class DELoginRequest, DELoginResponse, DEActivateUserRequest, DEChangePwdRequest, DEEnableFingerprintRequest, DEEnableFingerprintResponse, DELoginFingerprintRequest;
+
+/**
+ * Block invoked when a IDELoginService method has been failed
+ **/
+typedef void(^DELoginServiceFailure)(id<IDEError> error);
+
+/**
+ * Block invoked when the login method (@see IDELoginService:loginWithRequest:successBlock:failureBlock:) was successful
+ **/
+typedef void(^DELoginServiceLoginSuccess)(DELoginResponse *loginResponse);
+
+/**
+ * Block invoked when the logout (@see -logoutWithSuccessBlock:successBlock :failureBlock) method was successful
+ **/
+typedef void(^DELoginServiceLogoutSuccess)();
+
+/**
+ * Block invoked when the checkSession (@see -checkSessionWithSuccess:successBlock :failureBlock) method was successful
+ **/
+typedef void(^DELoginServiceCheckSessionSuccess)();
+
+/**
+ * Block invoked when the activateUser (@see -activateUserWithSuccess:successBlock :failureBlock) method was successful
+ **/
+typedef void (^DELoginServiceActivateUserSuccess)();
+
+/**
+ * Block invoked when the changePwd (@see -) method was successful
+ **/
+
+typedef void (^DELoginServiceChangePwdSucces)();
+
+/**
+ *  Block invoked when the enable fingerprint method was successful.
+ */
+typedef void (^DELoginServiceEnableFingerprintSuccess)(DEEnableFingerprintResponse* enableFingerprintResponse);
+
+/**
+ *  Block invoked when the login fingerprint was successful.
+ */
+typedef void (^DELoginServiceLoginFingerprintSuccess)(DELoginResponse* loginFingerprintResponse);
+
+/**
+ *  Block invoked when the user registration was successful.
+ */
+typedef void (^DELoginServiceRegisterUserSuccess)();
+
+/**
+ * This service is needed for performing login/logut operations to the MOTIF SME Pay application.
+ *
+ * Before to performs SME Pay SDK operations you need to logging into the remote MOTIF SME Pay application to open a valid session.
+ * The duration of this session depends on parameters set on MOTIF service side. When the session expires the app needs to make a new login.
+ *
+ * With checkSessionWithSuccess method exposed by this service you can check if a session is still valid.
+ * For example you can check the session after the app returns in foreground.
+ *
+ */
+@protocol IDELoginService <NSObject>
+
+/**
+ * Send a Login request to the MOTIF Service.
+ * The operation allows registered users to log into the MOTIF SME Pay application.
+ *
+ * A failure block is invoked when a low level problem is detected: for example no Network available, remote service not reachable, etc...)
+ * If the login success a new session starts. The session can be expire depending on configuraiton on MOTIF Server. When a session expires, a new login is required.
+ *
+ * Possible error values:
+ *
+ *  **USER_NOTFOUND**:                 User not found
+ *
+ *  **ACTIVATION_REQUIRED**:           Activation required
+ *
+ *  **AUTHENTICATION_FAILURE**:        Wrong password
+ *
+ *  **APP_BLOCKED**:                   Application instance has been blocked
+ *
+ *  **ACCOUNT_SUSPENDED**:             User account has been suspended due to too many login failures
+ *
+ *  @param loginRequest The Login requet (@see DELoginRequest class)
+ *  @param successBlock The block invoked when the login has been completed successfully
+ *  @param failureBlock TThe block invoked when the login has been failed
+ */
+- (void) loginWithRequest:(DELoginRequest *) loginRequest successBlock:(DELoginServiceLoginSuccess) successBlock failureBlock:(DELoginServiceFailure) failureBlock;
+
+/**
+ * Send a Logout request to the MOTIF Service and invalidate the current session.
+ *
+ *  @param successBlock The block invoked when the login has been completed successfully
+ *  @param failureBlock The block invoked when the logout has been failed
+ */
+- (void) logoutWithSuccessBlock:(DELoginServiceLogoutSuccess) successBlock failureBlock:(DELoginServiceFailure) failureBlock;
+
+/**
+ * Check the current session status.
+ *
+ *  @param successBlock The block invoked when the session has been checked and remote validated successfully
+ *  @param failureBlock The block invoked when the login has been failed
+ */
+- (void) checkSessionWithSuccess:(DELoginServiceCheckSessionSuccess) successBlock failure:(DELoginServiceFailure) failureBlock;
+
+/**
+ *
+ *  @param successBlock The block invoked when the user activation has been successfully
+ *  @param failureBlock The block invoked when the user activation has been failed
+ */
+- (void) activateUserRequest:(DEActivateUserRequest*) activateRequest successBlock:(DELoginServiceActivateUserSuccess) successBlock failure:(DELoginServiceFailure) failureBlock;
+
+/**
+ *
+ *  @param successBlock The block invoked when the change password operation has been successfully
+ *  @param failureBlock The block invoked when the changepassword operation has been failed.
+ */
+- (void) changePwdRequest:(DEChangePwdRequest*) changePwdRequest successBlock:(DELoginServiceChangePwdSucces) successBlock failure:(DELoginServiceFailure) failureBlock;
+
+/**
+ *
+ *  @param successBlock The block invoked when the enable fingerprint operation has been successfully.
+ *  @param failureBlock The block invoked when the enable fingerprint operation has failed.
+ */
+- (void) enableFingerprintWithRequest: (DEEnableFingerprintRequest *) enableFingerprintRequest successBlock:(DELoginServiceEnableFingerprintSuccess) successBlock failureBlock:(DELoginServiceFailure) failureBlock;
+
+/**
+ *
+ *  @param successBlock The block invoked when the login fingerprint operation has been successfully.
+ *  @param failureBlock The block invoked when the login fingerprint operation has failed.
+ */
+- (void) loginWithFingerprint: (DELoginFingerprintRequest *) loginFingerprintRequest successBlock:(DELoginServiceLoginFingerprintSuccess) successBlock failureBlock:(DELoginServiceFailure) failureBlock;
+
+/**
+ *
+ *  @param userID The user ID
+ *  @param maskedPhone The phone number masked
+ *  @param successBlock The block invoked when the login fingerprint operation has been successfully.
+ *  @param failureBlock The block invoked when the login fingerprint operation has failed.
+ */
+- (void) registerUserWithUserID:(NSString *)userID maskedPhone:(NSString *) maskedPhone success:(DELoginServiceRegisterUserSuccess) successBlock failure:(DELoginServiceFailure) failureBlock;
+
+
+@end
+
+\end{minted}
+\captionof{listing}{Implementación completa de la interfaz del servicio register para la librería de iOS}
+\end{code}
+\bigbreak
+#+END_LaTeX
