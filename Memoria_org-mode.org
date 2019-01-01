@@ -433,6 +433,196 @@ public interface RegisterServiceCallback<T> {
 #+END_LaTeX
 Por otro lado, se encuentra el código encargado de serializar y deserializar las llamadas y respuestas del servidor.
 [fn:28] https://gradle.org/
+*** Serialización y deserialización
+Al realizarse un desarrollo para Android, se emplea la librería incluida en su SDK, GSON[fn:29]. Esta librería desarrollada por Google implementa toda la funcionalidad necesaria para realizar
+las operaciones de serialización y deserialización.
+\\
+\\
+Java puede crear una gran cantidad de "basura" y esta lastra el funcionamiento general de un programa al entrar el garbage collector[fn:30] en funcionamiento. Para intentar evitar esta situación una de las prácticas que recomendiendan desde el equipo
+que se dedica al desarrollo móvil en las oficinas centrales de Vipera en Milan es el uso del patrón singleton siempre que se vayan a emplear objetos reutilizables, ya que este garantiza que un objeto
+solo tendrá una instancia que será accedida a través de un acceso global\cite{Singleton} (en el caso de Java un método público estático).
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:android-singleton}
+\begin{minted}[linenos,tabsize=2,breaklines]{java}
+package com.vipera.de.cardcontrol.serializer;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.List;
+
+/**
+ * Created by SME Project Team on 26/09/2018.
+ * Copyright © 2018 Vipera. All rights reserved.
+ */
+
+public class JSONSerializer {
+
+    private static JSONSerializer instance;
+    private Gson gson;
+
+    private JSONSerializer(){
+        this.gson = createGSONInstance();
+    }
+
+    private Gson createGSONInstance() {
+        return new GsonBuilder()
+                ...
+                .create();
+    }
+
+    public static synchronized JSONSerializer getInstance() {
+        if(instance == null){
+            instance = new JSONSerializer();
+        }
+        return instance;
+    }
+
+    public <T> T fromJson(JSONObject jsonObject, Class<T> classOfT) throws DEJSONParseException {
+        try {
+            return gson.fromJson(jsonObject.toString(),classOfT);
+        }catch (Exception ex){
+            throw new DEJSONParseException(ex);
+        }
+    }
+
+    public <T> List<T> fromJsonArray(JSONArray jsonArray) throws DEJSONParseException {
+        try {
+            return gson.fromJson(jsonArray.toString(), new TypeToken<List<T>>(){}.getType());
+        }catch (Exception ex){
+            throw new DEJSONParseException(ex);
+        }
+    }
+
+    public JSONObject toJSON(Object target) throws JSONException {
+        return new JSONObject(gson.toJson(target));
+    }
+
+    public JSONArray toJSONArray(Object target) throws JSONException {
+        return new JSONArray(gson.toJson(target));
+    }
+
+
+}
+
+\end{minted}
+\captionof{listing}{Implementación parcial de un singleton en Java para la (de)serialización de JSON}
+\end{code}
+\bigbreak
+#+END_LaTeX
+Por otro lado, también hay que definir los objetos que van a contener los datos que pueden ser deserializados desde un JSON o serializados a este. Para ello, se define una clase un conjunto de atributos
+que serán los que contengan la información. Estos atributos tienen que ser vinculados empleando la etiqueta ~@SerializedName~ para que GSON pueda realizar la serialización
+o deserialización.
+\\
+\\
+El acceso y modificación de los atributos del objeto se realiza a través de métodos públicos get y set, habiendo uno de cada para cada atributo. Dado que Java es un lenguaje muy verboso y este tipo de implementaciones
+ocupan mucho espacio, se adjunta el código relazionado con el JSON de la llamada a la operación /activateUser/ en el \hyperref[code:android-json]{Anexo A}.
+[fn:29] https://github.com/google/gson
+[fn:30] https://bit.ly/2CKqpfT
+*** Desarrollo de un servicio
+Cada servicio de SME Pay cuenta con una interfaz del servicio, una \hyperref[code:androidcallback]{interfaz del callback} y una implementación del servicio en la librería desarrollada para Android.
+**** Interfaz del servicio
+Este fichero define las cabeceras de todas la operaciones del servicio, que en Java serán funciones. También define el nombre de todas las operaciones del servicio de manera que puedan ser usados por el
+fichero que contiene la implementación. Cabe destacar que cada función tiene siempre como parámetro el callback, que será implementado independientemente para cada una de las operaciones. Así mismo, en caso
+de que existan parámetros de llamada en la operación, estos también serán parametros en la función asociada.
+\\
+\\
+A continuación se expone la parte de la interfaz que define la operación /activateUser/, pudiéndose encontrar todo el código en el \hyperref[code:android-interface-complete]{Anexo A}.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:android-interface}
+\begin{minted}[linenos,tabsize=2,breaklines]{java}
+package com.vipera.de.cardcontrol.services.login;
+
+/**
+ * Created by SME Project Team on 28/09/18.
+ * Copyright © 2018 Vipera. All rights reserved.
+ */
+
+public interface IDELoginService {
+
+    String LOGIN_SERVICE_OP_ACTIVATE_USER = "activateUser";
+
+    /**
+     * Check the current session status.
+     * @param callback the checkSession callback. No result is provided in {@code onSuccess} method
+     */
+    void activateUser(String user, String email, String otp, String private_pwd, String private_vpwd, DELoginServiceCallback<Void> callback);
+}
+
+\end{minted}
+\captionof{listing}{Implementación parcial de la interfaz del servicio register para la librería de Android}
+\end{code}
+\bigbreak
+#+END_LaTeX
+**** Implementación del servicio
+El fichero que realiza la implementación del servicio implementará todas las funciones definidas en la interfaz, y también definirá los nombres de los campos de los JSON que empleará. Por otro lado,
+como se ha mencionado anteriormente también tendrá que implementar el comportamiento del callback en cada una de las funciones.
+\\
+\\
+En el siguiente \hyperref[code:android-implementation]{código} se puede observar
+la implementación de la función que llamada a la operación /activateUser/ del servicio register. Todo el código relacionado con la implementación de los servicios se entraga compilador en el fichero JAR que contiene
+la librería, de manera que su funcionamiento interno queda oculto a los usuarios mientras no empleen decompiladores.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:android-implementation}
+\begin{minted}[linenos,tabsize=2,breaklines]{java}
+package com.vipera.de.cardcontrol.services.login;
+
+import android.util.Log;
+
+import com.vipera.de.cardcontrol.data.login.DEActivateUserRequest;
+import com.vipera.de.cardcontrol.serializer.JSONSerializer;
+import com.vipera.de.cardcontrol.data.error.DEError;
+import com.vipera.de.cardcontrol.data.error.IDEError;
+import com.vipera.de.cardcontrol.data.error.exceptions.DEJSONParseException;
+import com.vipera.de.cardcontrol.services.network.DEMotifRequest;
+import com.vipera.de.cardcontrol.services.network.DEMotifRequestCallback;
+import com.vipera.de.cardcontrol.services.network.DEMotifResponse;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/**
+ * Created by SME Project Team on 28/09/2018.
+ * Copyright © 2018 Vipera. All rights reserved.
+ */
+
+public class DELoginService extends DEBaseService implements IDELoginService {
+    String LOGIN_USER_KEY = "user";
+    String LOGIN_EMAIL_KEY = "email";
+    String LOGIN_OTP_KEY = "otp";
+    String LOGIN_PRIVATE_PWD_KEY = "private:pwd";
+    String LOGIN_PRIVATE_VPWD_KEY = "private:vpwd";
+
+    @Override
+    public void activateUser(String user, String email, String otp, String private_pwd, String private_vpwd, final DELoginServiceCallback<Void> callback) {
+        DEActivateUserRequest activateUserRequest = new DEActivateUserRequest(user, email, otp, private_pwd, private_vpwd);
+        JSONObject reqHeader;
+        try {
+            reqHeader = JSONSerializer.getInstance().toJSON( activateUserRequest);
+        } catch (JSONException e) {
+            callback.onError(new DEError(IDEError.DEErrorCode.RequestParseError));
+            return;
+        }
+        DEMotifRequest request = this.serverManager.buildRequestForService( IDELoginService.LOGIN_SERVICE_NAME, IDELoginService.LOGIN_SERVICE_OP_ACTIVATE_USER, false);
+        request.setHeader(reqHeader);
+        sendActivateUser(callback, request);
+    }
+}
+
+\end{minted}
+\captionof{listing}{Código parcial de la implementación del servicio register para la librería de Android}
+\end{code}
+\bigbreak
+#+END_LaTeX
 ** Desarrollo de la libreria para iOS
 *** Estructura del proyecto
 El proyecto está estructurado en 2 partes. Por un lado se encuentra todo el código referente a los servicios de SME Pay, donde se establece la conexión con el servidor y se tratan las respuestas.
@@ -748,14 +938,205 @@ con lo que un error puede provocar un mal funcionamiento del plugin.
 Como se puede observar en el código, cada plataforma para la que se ofrece soporte se configura de manera explicita, indicando los ficheros y su ubicación. Estos ficheros realizan llamadas a las librerías
 nativas desarrolladas, y son invocados por Cordova cuando la aplicación hace llamadas a la interfaz Javascript que proporciona el plugin.
 * Resultados y conclusiones
-
-** Pruebas
-
 ** Conclusiones
 
 #+LaTeX: \printbibliography[heading=bibnumbered] % Última sección, numerada, para la bibliografía
 
 * ANEXO A - Código
+** Objeto DEActivateUserRequest
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:android-json}
+\begin{minted}[linenos,tabsize=2,breaklines]{java}
+package com.vipera.de.cardcontrol.data.login;
+
+import com.google.gson.annotations.SerializedName;
+
+public class DEActivateUserRequest {
+    public static final String DE_LOGIN_REQUEST_KEY_USER  = "user";
+    public static final String DE_LOGIN_REQUEST_KEY_EMAIL  = "email";
+    public static final String DE_LOGIN_REQUEST_KEY_OTP  = "otp";
+    public static final String DE_LOGIN_REQUEST_KEY_PRIVATE_PWD  = "private:pwd";
+    public static final String DE_LOGIN_REQUEST_KEY_PRIVATE_VPWD  = "private:vpwd";
+
+    @SerializedName(value = DE_LOGIN_REQUEST_KEY_USER)
+    private String user;
+
+    @SerializedName(value = DE_LOGIN_REQUEST_KEY_EMAIL)
+    private String email;
+
+    @SerializedName(value =  DE_LOGIN_REQUEST_KEY_OTP)
+    private String otp;
+
+    @SerializedName(value = DE_LOGIN_REQUEST_KEY_PRIVATE_PWD)
+    private String private_pwd;
+
+    @SerializedName(value = DE_LOGIN_REQUEST_KEY_PRIVATE_VPWD)
+    private String private_vpwd;
+
+    public DEActivateUserRequest() {}
+
+    public DEActivateUserRequest(String user, String email, String otp, String private_pwd, String private_vpwd) {
+        this.user = user;
+        this.email = email;
+        this.otp = otp;
+        this.private_pwd = private_pwd;
+        this.private_vpwd = private_vpwd;
+    }
+
+    public String getUser() {
+        return user;
+    }
+
+    public void setUser(String user) {
+        this.user = user;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getOtp() {
+        return otp;
+    }
+
+    public void setOtp(String otp) {
+        this.otp = otp;
+    }
+
+    public String getPrivate_pwd() {
+        return private_pwd;
+    }
+
+    public void setPrivate_pwd(String private_pwd) {
+        this.private_pwd = private_pwd;
+    }
+
+    public String getPrivate_vpwd() {
+        return private_vpwd;
+    }
+
+    public void setPrivate_vpwd(String private_vpwd) {
+        this.private_vpwd = private_vpwd;
+    }
+}
+
+\end{minted}
+\captionof{listing}{Implementación del objeto DEActivateUserRequest en Java}
+\end{code}
+\bigbreak
+#+END_LaTeX
+** Interfaz del servicio register para Android
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:android-interface-complete}
+\begin{minted}[linenos,tabsize=2,breaklines]{java}
+package com.vipera.de.cardcontrol.services.login;
+
+import com.vipera.de.cardcontrol.data.login.DELoginRequest;
+import com.vipera.de.cardcontrol.data.login.DELoginResponse;
+
+/**
+ * Created by SME Project Team on 28/09/18.
+ * Copyright © 2018 Vipera. All rights reserved.
+ */
+
+/**
+ * This service is needed for performing login/logut operations to the MOTIF Card Control Service.
+ *
+ * Before to performs Card Control SDK operations you need to logging into the remote MOTIF Card Control Service to open a valid session.
+ * The duration of this session depends on parameters set on MOTIF service side. When the session expires the app needs to make a new login.
+ *
+ * With checkSession method exposed by this service you can check if a session is still valid.
+ * For example you can check the session after the app returns in foreground.
+ *
+ */
+public interface IDELoginService {
+
+    String COMMON_SERVICE_NAME = "COMMON";
+    String COMMON_SERVICE_OP_CHECK_SESSION ="checkSession";
+    String LOGIN_SERVICE_NAME = "register";
+    String LOGIN_SERVICE_OP_LOGIN = "login";
+    String LOGIN_SERVICE_OP_LOGOUT = "logout";
+    String LOGIN_SERVICE_OP_ACTIVATE_USER = "activateUser";
+    String LOGIN_SERVICE_OP_ENABLE_FINGERPRINT= "enableFingerprint";
+    String LOGIN_SERVICE_OP_LOGIN_FINGERPRINT = "loginFingerprint";
+    String LOGIN_SERVICE_OP_REGISTER_USER = "registerUser";
+    String COMMON_SERVICE_OP_CHANGE_PWD = "changePwd";
+
+    /**
+     * Send a Login request to the MOTIF Service.
+     * The operation allows registered users to log into the MOTIF Card Control Service.
+     * {@code DELoginServiceCallback.onError} is invoked when a problem is detected: for example no Network available, remote service not reachable, etc...).
+     * If the login success a new session starts. The session can be expire depending on configuraiton on MOTIF Server. When a session expires, a new login is required.
+     * Possible (applicative) error values:
+     * <ul>
+     *    <li> USER_NOTFOUND : User not found</li>
+     *    <li> ACTIVATION_REQUIRED : Activation required</li>
+     *    <li> AUTHENTICATION_FAILURE : Wrong password</li>
+     *    <li> APP_BLOCKED : Application instance has been blocked</li>
+     *    <li> ACCOUNT_SUSPENDED : User account has been suspended due to too many login failures</li>
+     * </ul>
+     *
+     *
+     * @param loginRequest the login request. See {@link DELoginRequest} for details
+     * @param callback the login callback. See {@link DELoginResponse} for more details if login is successfully completed
+     */
+    void login(DELoginRequest loginRequest, DELoginServiceCallback<DELoginResponse> callback);
+
+
+    /**
+     * Send a Logout request to the MOTIF Service and invalidate the current session.
+     * @param callback the logout callback. No result is provided in {@code onSuccess} method
+     */
+    void logout(DELoginServiceCallback<Void> callback);
+
+
+    /**
+     * Check the current session status.
+     * @param callback the checkSession callback. No result is provided in {@code onSuccess} method
+     */
+    void checkSession(DELoginServiceCallback<Void> callback);
+
+    /**
+     * Check the current session status.
+     * @param callback the checkSession callback. No result is provided in {@code onSuccess} method
+     */
+    void activateUser(String user, String email, String otp, String private_pwd, String private_vpwd, DELoginServiceCallback<Void> callback);
+
+    /**
+     * Check the current session status.
+     * @param callback the checkSession callback. No result is provided in {@code onSuccess} method
+     */
+    void changePwd(String private_pwd, String private_npwd, String private_vpwd, DELoginServiceCallback<Void> callback);
+
+    /**
+     * Check the current session status.
+     * @param callback the checkSession callback. No result is provided in {@code onSuccess} method
+     */
+    void enableFingerprint(String user, DELoginServiceCallback<String> callback);
+
+    /**
+     * Check the current session status.
+     * @param callback the checkSession callback. No result is provided in {@code onSuccess} method
+     */
+    void loginFingerprint(String user, String FINGER_TOKEN, DELoginServiceCallback<Void> callback);
+    /**
+     * Check the current session status.
+     * @param callback the checkSession callback. No result is provided in {@code onSuccess} method
+     */
+    void registerUser(String user, String maskedPhone, DELoginServiceCallback<Void> callback);
+}
+
+\end{minted}
+\captionof{listing}{Implementación completa de la interfaz del servicio register para la librería de Android}
+\end{code}
+\bigbreak
+#+END_LaTeX
 ** Interfaz del servicio register para iOS
 #+BEGIN_LaTeX
 \begin{code}
