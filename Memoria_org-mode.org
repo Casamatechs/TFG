@@ -41,7 +41,6 @@
 \newpage
 
 \listoffigures
-\listoftables
 \listoflistings
 \newpage
 #+END_EXPORT
@@ -722,7 +721,7 @@ estáticamente el nombre de los campos del JSON, de forma que estos se usen como
 #+END_LaTeX
 *** Desarrollo de un servicio
 Para proceder a un desarrollo de una librería coherente con la estructura de SME Pay, se decidió diferenciar cada servicio de la misma forma. Así mismo, cada servicio contará con 3 ficheros.
-**** Interfaz del servicio
+**** Cabecera del servicio
 Este fichero actuará como interfaz pública del servicio, proporcionando todos los métodos que proporciona el servicio, definiendo los tipos que empleará para el tratamiento de las respuestas y
 especificando que clases empleará para la serialización y deserialización de las llamadas y respuestas.
 #+BEGIN_LaTeX
@@ -853,8 +852,10 @@ funciones inline.
 En el caso de la operación /activateUser/ no se recibe ningún tipo de información que deba ser deserializada, pero en el caso de las operaciones en lo que esto si ocurre, se deserializa en en la función inline
 correspondiente al éxito de la llamada, y se devuelve el objeto deserializado dentro del método ~successBlock()~.
 ** Desarrollo del plugin para Cordova
+La principal utilidad del uso de Cordova es la abstracción que ofrece a la hora de ejecutar plugins que contienen código nativo. En tiempo de ejecución, Cordova es capaz de determinar sobre que plataforma
+se está ejecutando y determinar a que código nativo tiene que invocar, abstrayendo al programador de este problema.
 *** Estructura del proyecto
-Un plugin para Cordova tiene una estructura definida que puede ser encontrada en su documentación online\cite{Cordova}. Tal y como se indica, en la raiz del proyecto existe el fichero \hyperref[code:pluginxml]{plugin.xml},
+Un plugin para Cordova tiene una estructura definida que puede ser consultada en su documentación online\cite{Cordova}. Tal y como se indica, en la raiz del proyecto existe el fichero \hyperref[code:pluginxml]{plugin.xml},
 el cual proporciona información acerca del plugin (nombre, versionado, licencia...) y su composición interna. Este archivo es crucial ya que es el que lee Cordova al realizar la instalación de un plugin,
 con lo que un error puede provocar un mal funcionamiento del plugin.
 #+BEGIN_LaTeX
@@ -937,11 +938,262 @@ con lo que un error puede provocar un mal funcionamiento del plugin.
 #+END_LaTeX
 Como se puede observar en el código, cada plataforma para la que se ofrece soporte se configura de manera explicita, indicando los ficheros y su ubicación. Estos ficheros realizan llamadas a las librerías
 nativas desarrolladas, y son invocados por Cordova cuando la aplicación hace llamadas a la interfaz Javascript que proporciona el plugin.
-* Resultados y conclusiones
-** Conclusiones
+*** Módulos de conexión para Android
+Debido a que los módulos de Android son usados únicamente de manera interna por Cordova para conectar la aplicación híbrida con la librería para Android desarrollada, estos no requieren una interfaz que
+exponga las funciones al exterior. De este modo tan solo contaremos con una clase que extenderá a ~CordovaPlugin~ (clase abstracta proporcionada por Cordova) por cada módulo que se implemente.
+Esta clase tan solo contará con dos métodos, ~initizalize~ y  ~execute~, siendo el primero el que inicialice el módulo y establezca la conexión entre la aplicación y la librería, y el segundo el que
+se encargue de interceptar las llamadas que llegan desde la interfaz de Javascript.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:cordova-android}
+\begin{minted}[linenos,tabsize=2,breaklines]{java}
 
+package com.vipera.cardcontrolplugin;
+
+import android.util.Log;
+
+import com.vipera.de.cardcontrol.data.error.IDEError;
+import com.vipera.de.cardcontrol.data.login.DELoginRequest;
+import com.vipera.de.cardcontrol.data.login.DELoginResponse;
+import com.vipera.de.cardcontrol.services.login.DELoginServiceCallback;
+import com.vipera.de.cardcontrol.services.login.IDELoginService;
+
+import org.apache.cordova.CordovaInterface;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CallbackContext;
+
+import org.apache.cordova.CordovaWebView;
+import org.apache.cordova.PluginResult;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
+public class LoginServicePlugin extends CordovaPlugin {
+
+    private static final String EXCEPTION_RESPONSE = "header";
+
+    ...
+
+    @Override
+    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
+        loginService = loginService();
+        super.initialize(cordova, webView);
+    }
+
+    @Override
+    public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
+        switch (action) {
+
+            ...
+
+            case "activateUser": {
+                cordova.getThreadPool().execute(new Runnable() {
+                    public void run() {
+                        try {
+                            loginService.activateUser( args.getString(0), args.getString(1), args.getString(2), args.getString(3), args.getString(4), new DELoginServiceCallback<Void>() {
+                                @Override
+                                public void onSuccess(Void result) {
+                                    Log.i("activateUser", "success");
+                                }
+                                @Override
+                                public void onError(IDEError error) {
+                                    handleException(error, callbackContext);
+                                    Log.e("activateUser error",error.getErrorCode() + "  -  " + error.getErrorMessage());
+                                }
+                            });
+                        } catch (JSONException e ){
+                            Log.e("activateUser", e.toString());
+                        }
+                    }
+                });
+                break;
+            }
+
+            ...
+
+        }
+
+        return true;
+    }
+
+    private void handleException(IDEError error, final CallbackContext callbackContext) {
+        JSONObject JSONerror = new Encode().encodeToJson(error, EXCEPTION_RESPONSE);
+        PluginResult finalResult = new PluginResult(PluginResult.Status.ERROR, JSONerror);
+        finalResult.setKeepCallback(true);
+        callbackContext.sendPluginResult(finalResult);
+    }
+}
+
+\end{minted}
+\captionof{listing}{Implementación del conector de Android del plugin para el servicio register}
+\end{code}
+\bigbreak
+#+END_LaTeX
+*** Módulos de conexión para iOS
+Para la comunicación entre el plugin y el framework desarrollado para iOS como parte de la solución, se emplean unos conectores que siguen la misma estructura que cualquier implementación en Objective-C,
+siendo necesarios los ficheros de cabecera e implementación.
+**** Cabecera del módulo
+Este fichero es el que consultará Cordova para ejecutar el código nativo, por lo que el nombre de las funciones debe ser igual al definido por la interfaz Javascript. Cada una de las funciones definidas
+recibirá siempre un único parametro del tipo ~CDVInvokedUrlCommand~, el cual contendrá toda la información suministrada desde la aplicación.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:cordova-ios-interface}
+\begin{minted}[linenos,tabsize=2,breaklines]{obj-c}
+#import <Cordova/CDVPlugin.h>
+#import <DECardControl/DEActivateUserRequest.h>
+#import "CardControlConfig.h"
+#import "MotifConnectorConfiguration.h"
+#import <DECardControl/DECardControlService.h>
+
+@interface LoginServicePlugin : CDVPlugin {
+}
+
+// The hooks for our plugin commands
+-(void) initialize:(CDVInvokedUrlCommand *)command;
+-(void) loginOp:(CDVInvokedUrlCommand *)command;
+-(void) activateUserOp:(CDVInvokedUrlCommand *) command;
+-(void) changePwdOp:(CDVInvokedUrlCommand *) command;
+-(void) enableFingerprintOp:(CDVInvokedUrlCommand *)command;
+-(void) logoutOp:(CDVInvokedUrlCommand *) command;
+-(void) loginFingerprintOp:(CDVInvokedUrlCommand *) command;
+@end
+
+\end{minted}
+\captionof{listing}{Implementación de la cabecera del conector de iOS del plugin para el servicio register}
+\end{code}
+\bigbreak
+#+END_LaTeX
+**** Implementación del módulo
+En la implementación del módulo se encuentra el código que invocará a la librería para iOS desarrollada como parte de la solución, así como toda la lógica de procesamiento de los datos de entrada. Como
+se puede observar en el \hyperref[code:cordova-ios-implementation]{código}, los parámetros de entrada se obtienen de la estructura ~arguments~, contenida en el parámetro ~command~ que recibe la función.
+Al recogerse estos parametros por su posición en la estructura de datos, la posición de cada uno de los parámetros viene predefinida en la documentación asociada a la solución, que es suministrada a los
+clientes.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:cordova-ios-implementation}
+\begin{minted}[linenos,tabsize=2,breaklines]{obj-c}
+#import "LoginServicePlugin.h"
+
+#import <Cordova/CDVAvailability.h>
+#import <DECardControl/IDELoginService.h>
+#import <DECardControl/DEActivateUserRequest.h>
+#import "CardControlConfig.h"
+#import "MotifConnectorConfiguration.h"
+#import <DECardControl/DECardControlService.h>
+#import "CardControlPlugin.h"
+
+@interface LoginServicePlugin()
+
+@property (nonatomic, strong) DECardControlService *cardControlService;
+
+@end
+
+@implementation LoginServicePlugin
+
+...
+
+-(void) activateUserOp:(CDVInvokedUrlCommand *)command
+{
+    NSString *userID = [command.arguments objectAtIndex:0];
+    NSString *userEmail = [command.arguments objectAtIndex:1];
+    NSString *otp = [command.arguments objectAtIndex:2];
+    NSString *password = [command.arguments objectAtIndex:3];
+    NSString *vPassword = [command.arguments objectAtIndex:4];
+
+    DEActivateUserRequest *activateRequest = [[DEActivateUserRequest alloc] initWithUserID:userID email:userEmail otp:otp password:password vPassword:vPassword];
+
+    id<IDELoginService> loginService = [self.cardControlService loginService];
+
+    [loginService activateUserRequest:activateRequest successBlock:^{
+        CDVPluginResult * result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+    } failure:^(id<IDEError> error) {
+        CDVPluginResult * result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error motifInternalError]];
+        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+    }];
+}
+
+...
+
+@end
+
+\end{minted}
+\captionof{listing}{Código de la implementación del conector de iOS del plugin para el servicio register}
+\end{code}
+\bigbreak
+#+END_LaTeX
+*** Interfaces Javascript
+Las interfaces Javascript se ubican en la carpeta ~www~ del plugin de Cordova. Estas se comunican con el código nativo mediante la llamada a la operación ~exec~ incluida en la librería proporcionada por Cordova
+para comunicarse con el código nativo.
+\\
+\\
+Cada interfaz contiene un JSON que define todas las funciones, definiendo como parámetros un callback de éxito, un callback de fallo y una lista que contendra los datos a procesar por el código nativo. Estos parametros
+son pasados a la función ~exec~ junto al nombre de la clase homóloga en código nativo y el nombre de la función a invocar.
+\\
+\\
+Este JSON será exportado por la interfaz de manera que pueda ser invocado por la aplicación híbrida.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:js-interface}
+\begin{minted}[linenos,tabsize=2,breaklines]{js}
+var exec = require('cordova/exec');
+
+var PLUGIN_NAME = 'LoginServicePlugin';
+
+var LoginServiceiOSPlugin = {
+
+  initialize: function(cb) {
+    exec(cb, null, PLUGIN_NAME, 'initialize', []);
+  },
+  login: function (successCallback, failureCallback, args) {
+    exec(successCallback,failureCallback,PLUGIN_NAME,'login',args);
+  },
+  activateUser: function(successCallback, failureCallback, args){
+    exec(successCallback, failureCallback, PLUGIN_NAME, 'activateUser', args);
+  },
+  changePwd: function(successCallback, failureCallback, args){
+    exec(successCallback, failureCallback, PLUGIN_NAME, 'changePwd', args);
+  },
+  enableFingerprint: function (successCallback, failureCallback, args) {
+    exec(successCallback,failureCallback, PLUGIN_NAME, 'enableFingerprint', args);
+  },
+  logout: function (successCallback, failureCallback, args) {
+    exec(successCallback, failureCallback, PLUGIN_NAME, 'logout', args);
+  },
+  loginFingerprint: function (successCallback, failureCallback, args) {
+    exec(successCallback, failureCallback, PLUGIN_NAME, 'loginFingerprint', args);
+  }
+};
+
+module.exports = LoginServiceiOSPlugin;
+
+\end{minted}
+\captionof{listing}{Implementación de una interfaz Javascript para el plugin de Cordova}
+\end{code}
+\bigbreak
+#+END_LaTeX
+Con la interfaz exportada, tan solo habrá que realizar una llamada a la operación elegida y definir el comportamiento de los callback.
+#+BEGIN_LaTeX
+\begin{code}
+\label{code:motifconnector}
+\begin{minted}[linenos,tabsize=2,breaklines]{ts}
+(<any>window).LoginServicePlugin.activateUser((isSuccess) => {
+        /*Codigo a ejecutar en caso de exito*/
+      }, (isFailure) => {
+        /*Codigo a ejecutar en caso de error*/
+      }, ["user1@company1.com", "user1@company1.com", "123456", "1111", "1111"]);
+\end{minted}
+\captionof{listing}{Ejemplo de una llamada empleando el plugin desarrollado}
+\end{code}
+\bigbreak
+#+END_LaTeX
+* Conclusiones
+Tras el desarrollo de la solución híbrida he sacado las siguientes conclusiones:
++ El desarrollo móvil nativo proporciona claras ventajas respecto a las soluciones híbridas basadas en el uso un navegador web embebido dentro de una aplicación. Sin duda el desarrollo híbrido abarata mucho los costes, ya que no es necesario que el desarrollador controle 2 lenguajes y sus librerías asociadas como sí sucede con la programación nativa, pero aun sin ser necesario el conocimiento de estas tecnologías no deja de ser recomendable de cara a la posibilidad de realizar desarrollos similares al ejecutado en el este Proyecto Fin de Grado.
++ Las empresas del sector financiero tienen un miedo relativo al cambio. A pesar de que invierten una gran cantidad de recursos en mejorar y renovar sus sistemas y tecnologías, el tamaño de estas empresas y su necesidad de seguridad las hace implementar cambios en el negocio con una velocidad insuficiente en muchos casos. En el caso de este proyecto, se exploró la posibilidad de realizar el desarrollo en los lenguajes modernos para desarrollo nativo (Kotlin y Swift), pero se terminó descartando la idea debido a que la inmensa mayoría de potenciales clientes finales emplean aun Java y Objective-C en sus aplicaciones, y a pesar de que estas tecnologías son compatibles entre ellas en un principio, se sienten más cómodos empleando librerías desarrolladas en los lenguajes usados por ellos.
 #+LaTeX: \printbibliography[heading=bibnumbered] % Última sección, numerada, para la bibliografía
-
+\newpage
 * ANEXO A - Código
 ** Objeto DEActivateUserRequest
 #+BEGIN_LaTeX
