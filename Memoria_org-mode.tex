@@ -1,4 +1,4 @@
-% Created 2019-01-02 mié 18:26
+% Created 2019-01-10 jue 19:13
 \documentclass[a4paper, 12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -62,17 +62,31 @@
 
 \begin{abstract}
 \normalsize
-Aquí el texto del abstract.
-
-\textbf{Palabras clave:} palabra 1, palabra 2, palabra 3\ldots{}
+Con la extensión de los pagos con tarjetas bancarias en sustitución del efectivo, se ha vuelto necesario el control exhaustivo de estas para evitar
+robos, fraudes y descubiertos inesperados entre otras posibles situaciones. En el ambito empresarial también se ha notado esta situación, obligando a
+las empresas a tener un control más exhaustivo sobre los gastos que se hacen con sus tarjetas.
+\\
+\\
+Este trabajo fin de grado plantea la implementación de una solución móvil nativa e híbrida para facilitar a los bancos y empresas el control de sus tarjetas,
+implementando una lógica de privilegios que permita controlar que usuarios tienen permisos para distintas acciones. Esta solución se integra en el proyecto SME PAY
+desarrollado por Vipera.
+\\
+\\
+\textbf{Palabras clave:} MOTIF, SME Pay, iOS, Android, Cordova
 \end{abstract}
-
+\break
 \begin{otherlanguage}{english}
 \begin{abstract}
 \normalsize
-Here goes the abstract text.
-
-\textbf{Keywords:} keyword 1, keyword 2, keyword 3\ldots
+With the expansion of the payments using bank cards instead of cash, it has become mandatory to set an exhaustive control on these cards to avoid robberies, fraud and unexpected
+overdrafts among other possible situations. Also, in the bussiness world this situation has been noticed, forcing the companies to have a more comprenhensive control over the expenses made by
+their employees with the company cards.
+\\
+\\
+This final degree project proposes the implementation of a native and hybrid mobile solution to make it easier for the banks and companies to control their bank cards, deploying a privileges logic that allows to control which users have the privileges to perform different actions. This solution is integrated into the SME PAY project developed by Vipera.
+\\
+\\
+\textbf{Keywords:} MOTIF, SME Pay, iOS, Android, Cordova\ldots
 \end{abstract}
 \end{otherlanguage}
 
@@ -89,28 +103,29 @@ en el 2017\cite{BancoEspana}.
 \\
 Este rápido incremento de las operaciones con tarjeta también se ha trasladado al entorno corporativo,
 generando nuevas necesidades para el control por parte de las empresas de las tarjetas que dan a sus
-empleados. Con el objetivo de cubrir esta necesidad, tanto Mastercard \footnote{\url{https://developer.mastercard.com/product/spend-controls}} como Visa \footnote{\url{https://developer.visa.com/capabilities/vctc}} han
-implementado nuevas funcionalidades de control de tarjetas que permiten el control directo por parte
-de las empresas de sus tarjetas, de manera que se puedan recibir alertas de gasto o bloquear determinados tipos de pago.
+empleados. Con el objetivo de cubrir estas necesidades, tanto Mastercard\footnote{\url{https://developer.mastercard.com/product/spend-controls}} como Visa\footnote{\url{https://developer.visa.com/capabilities/vctc}} han implementado distintas funcionalidades para el control de sus tarjetas,
+las cuales muchos bancos facilitan en la actualidad a clientes particulares. En Vipera\footnote{\url{http://www.vipera.com/}} se desarrolló un prototipo para un gran banco europeo que integraba
+la solución de Mastercard y debido al éxito del proyecto se decidió crear un nuevo proyecto partiendo de la base de esta solución que añadiese la lógica de negocio
+necesaria para la integración de estos controles en un entorno empresarial.
 \\
 \\
-Este servicio es ofrecido a través de diversas API REST y en Vipera hemos implementado una aplicación que
-abstrae a los clientes finales (bancos y empresas) de las API proporcionadas por Visa y Mastercard,
-ofreciendo una API REST centralizada que simplifica las operaciones. Esta API interactúa con un servicio
-propietario de Vipera que integra toda la funcionalidad requerida por los distintos clientes finales.
+Dado que el proyecto ha sido de gran envergadura, ha habido un equipo de 8 personas trabajando desde Madrid tanto en el desarrollo del backend como de la aplicación móvil,
+así como gestores coordinando el proyecto desde Londres y Milán. En mi caso, entré en el equipo cuando este se formó en Enero de 2018, y he desarrollado parte de la lógica del servidor,
+así como gran parte de la aplicación móvil. A principios de Junio de 2018 uno de los clientes de Vipera reclamó un SDK para conectar sus aplicaciones nativas a la solución, por lo que los
+desarrolladores de la aplicación móvil viajamos a Milán para formarnos y poder realizar el trabajo solicitado. A raíz de esta formación surgió la idea de proponer el desarrollo de estos SDK y su
+integración en un plugin de Cordova\footnote{\url{https://cordova.apache.org/}} como trabajo fin de grado.
 \\
 \\
 Los SDK desarrollados para la integración de nuestro servicio en las aplicaciones móviles de los clientes
 pretenden abstraer totalmente de las llamadas al servicio de manera que los desarrolladores tan solo
 vean funciones totalmente descriptivas sin tener que preocuparse de la configuración necesaria para la
-interacción. Así mismo, ya que la demo técnica realizada por Vipera está implementada con Ionic\footnote{\url{https://ionicframework.com/}},
-se ha implementado un plugin de Cordova\footnote{\url{https://cordova.apache.org/}} que habilita la llamada a los SDK de iOS y Android.
+interacción.
 
 \section{Estado del arte}
 \label{sec-2}
 \subsection{Tecnologías}
 \label{sec-2-1}
-En el mercado móvil actual iOS y Android lideran con mano de hierro dejando una cuota residual a otros
+En el mercado móvil actual iOS y Android lideran con mano de hierro, dejando una cuota residual a otros
 entornos como Windows Phone y otros sistemas menores. En conjunto, iOS y Android acapararon el 99,7\% de
 las ventas en el primer trimestre de 2018 en España, dejando a Windows fuera de las estadísticas al no lograr
 el 0,1\% de las ventas totales\footnote{\url{https://bit.ly/2Cu8NVy}}. Teniendo presentes estos datos, resulta obvio que cualquier tipo de desarrollo
@@ -148,7 +163,7 @@ con Android.
 \\
 \\
 Las primeras versiones del SDK proporcionado por Google contaban tan solo con
-soporte para el lenguaje Java\footnote{\url{https://www.java.com}}. Al contrario de su principal competidor, el código fuente
+soporte para el lenguaje Java\footnote{\url{https://www.java.com}}. Al contrario que su principal competidor, el código fuente
 de Android siempre ha sido open source\footnote{\url{https://source.android.com/}} lo que ha atraído a una gran cantidad de
 desarrolladores y fabricantes. De todos modos, la práctica totalidad de los fabricantes
 integran en sus terminales la versión de Android propietaria de Google, que incluye
@@ -180,13 +195,13 @@ aplicaciones de esta gestión y facilita la escritura de código.
 \label{sec-2-2}
 El despliegue del lado del servidor de la aplicación bancaria con la que se ha operado
 para la realización de este trabajo está realizado sobre una plataforma propietaria propiedad
-de Vipera\footnote{\url{http://www.vipera.com/}} cuyo nombre comercial es MOTIF\footnote{\url{http://www.vipera.com/motif}}.
+de Vipera cuyo nombre comercial es MOTIF\footnote{\url{http://www.vipera.com/motif}}.
 \\
 \\
 MOTIF es un servicio desarrollado en Java haciendo uso del framework OSGi\footnote{\url{https://www.osgi.org/}}, creado en 1999
 como una primera aproximación al mundo de los microservicios en Java. En concreto, el desarrollo de MOTIF
 ha sido llevado a cabo empleando Apache Felix\footnote{\url{https://felix.apache.org/}} como implementación del framework OSGi. El uso de
-este framework facilita la integración con los clientes finales, por lo general banco y otros servicios
+este framework facilita la integración con los clientes finales, por lo general bancos y otros servicios
 financieros, ya que estos suelen emplear Java en sus propios servicios y la arquitectura OSGi permite una
 integración sencilla de diferentes módulos a los que se llama \emph{plugins} con el resto del sistema. En la \hyperref[fig:motif-core]{figura 1}
 se representan los servicios básicos implementados en el core de MOTIF.
@@ -205,7 +220,7 @@ la librería Hibernate\footnote{\url{https://hibernate.org/}} y otros que implem
 \\
 Para realizar la conexión con MOTIF, por defecto existen 2 métodos distintos:
 \begin{itemize}
-\item \textbf{API REST}: Está pensada para dar servicio a implementaciones de administracióndel sistema como podría ser un Help Desk.
+\item \textbf{API REST}: Está pensada para dar servicio a implementaciones de administración del sistema como podría ser un Help Desk.
 \item \textbf{JSON Protocol}: Este método de conexión es el que se emplea en las soluciones móviles. Se basa en peticiones POST a un endpoint estático, el cual procesa la información enviada en la petición y determina el comportamiento que debe seguir el servidor.
 \end{itemize}
 
@@ -260,14 +275,14 @@ como en Java para Android. También se implementó un plugin de Cordova para fac
 \\
 \\
 En el siguiente \hyperref[code:motifconnector]{código} podemos observar como se compone la misma llamada a MOTIF expuesta en
-el apartado anterior empleando el plugin para Cordova. Podemos observar el campo \emph{header} sigue existiendo y siendo definido
+el apartado anterior empleando el plugin para Cordova. Podemos observar que el campo \emph{header} sigue existiendo y siendo definido
 como un JSON, pero el usuario queda abstraido del formato del JSON que configura el dominio, aplicación, servicio y operación.
 \\
 \\
 Por último, se puede observar en la composición de la llamada al servidor que hay un campo booleano marcado como \emph{false}. Este
-campo determina si la llamada es segura, lo que implicaría la necesidad de que en la llamada incluya un ID de sesión para el
+campo determina si la llamada es segura, lo que implicaría la necesidad de que en la llamada se incluya un ID de sesión para el
 usuario que la hace. El plugin implementa una función que guarda en la instancia este ID una vez el usuario se autentica con el
-servido. En este caso la llamada es de activación de un usuario, por lo que no se puede tener un ID de sesión.
+servidor. En este caso la llamada es de activación de un usuario, por lo que no se puede tener un ID de sesión.
 \begin{code}
 \label{code:motifconnector}
 \begin{minted}[linenos,tabsize=2,breaklines]{ts}
@@ -306,23 +321,23 @@ siendo la gestión totalmente indiferente de cara al usuario, ya que las diferen
 por MOTIF.
 \subsection{Estructura de la aplicación}
 \label{sec-3-1}
-En la actualidad SME Pay ofrece 2 areas diferenciadas claramente. Por un lado se proporciona la posibilidad de controlar tarjetas personales,
-que podrán ser añadidas y eliminadas de manera arbitraria por cada usuario y a las que ningún otro usuario que no sea el propietario podrá tener
-acceso. Por otro lado, los gestores de las empresas que adquieran el producto tendrán acceso desde su aplicación a un apartado diferenciado que
-permitirá controlar las tarjetas de la empresa. Para efectuar este control se han implementado distintos servicios que interactuan entre ellos
-tal y como se puede observar en la \hyperref[fig:sme-services]{figura 2}.
 \begin{figure}[htb]
 \centering
 \includegraphics[width=.9\linewidth]{./images/smepay.png}
 \caption{\label{fig:sme-services}Servicios proporcionados por el JSON Endpoint de SME Pay}
 \end{figure}
+En la actualidad SME Pay ofrece 2 areas diferenciadas claramente. Por un lado se proporciona la posibilidad de controlar tarjetas personales,
+que podrán ser añadidas y eliminadas de manera arbitraria por cada usuario y a las que ningún otro usuario que no sea el propietario podrá tener
+acceso. Por otro lado, los gestores de las empresas que adquieran el producto tendrán acceso desde su aplicación a un apartado diferenciado que
+permitirá controlar las tarjetas de la empresa. Para efectuar este control se han implementado distintos servicios que interactuan entre ellos
+tal y como se puede observar en la \hyperref[fig:sme-services]{figura 2}.
 \subsubsection{Servicio \emph{register}}
 \label{sec-3-1-1}
 El servicio register ofrece funcionalidades de activación, login y logout. Para efectuar un login se puede hacer tanto empleando el PIN elegido por el usuario como su huella dactilar en caso de que el
-dispositivo móvil permita, así como el uso de la tecnología de reconocimiento facial en los modelos de Apple que así lo permitan.
+dispositivo móvil lo permita, así como el uso de la tecnología de reconocimiento facial en los modelos de Apple que así lo permitan.
 \subsubsection{Servicio \emph{alert}}
 \label{sec-3-1-2}
-El servicio alert gestiona la configuración de notificaciones de las tarjetas personales de cada usuario. Tal y como se puede observar en la \hyperref[fig:trx-alert]{figura 3}
+El servicio alert gestiona la configuración de notificaciones de las tarjetas personales de cada usuario. Tal y como se puede observar en la \hyperref[fig:trx-alert]{figura 3},
 en este punto debemos diferenciar entre notificaciones de los servicios ofrecidos por Mastercard y VISA y las notificaciones push que manda SME Pay a
 los terminales móviles de los usuarios.
 \\
@@ -345,7 +360,7 @@ El servicio cardinfo ofrece funcionalidades de registro, activacion, desactivaci
 por el usuario y sus transacciones asociadas almacenadas en los servidores de SME Pay.
 \subsubsection{Servicio \emph{smeprofiling}}
 \label{sec-3-1-5}
-El servicio smeprofiling es el principal del producto SME Pay. Este proporciona las mismas funcionalidades que los servicios \emph{alert},/control/ y \emph{cardinfo} añadiendo toda la lógica de negocio necesaria
+El servicio smeprofiling es el principal del producto SME Pay. Este proporciona las mismas funcionalidades que los servicios \emph{alert}, \emph{control} y \emph{cardinfo} añadiendo toda la lógica de negocio necesaria
 para permitir la gestión de las tarjetas de empresa tanto por los usuarios que las tienen asignadas, como por los gestores. En SME Pay se diferencia entre 3 tipos de usuarios: \hyperref[sec:bsowner]{Business owner}, \hyperref[sec:gadmin]{Group Admin}
 y \hyperref[sec:user]{User}.
 \paragraph{Business Owner}
@@ -372,7 +387,7 @@ establecidos por el business owner o el group admin.
 \label{sec-3-2}
 \subsubsection{Aplicación de Vipera}
 \label{sec-3-2-1}
-Para la presentación del producto SME Pay en el Finovate London 2018\footnote{\url{https://finovate.com/videos/finovateeurope-2018-vipera-mastercard/}} se desarrolló un prototipo de aplicación móvil en Ionic que conectaba con el producto mediante llamadas HTTP realizadas directamente por
+Para la presentación del producto SME Pay en el Finovate London 2018\footnote{\url{https://finovate.com/videos/finovateeurope-2018-vipera-mastercard/}} se desarrolló un prototipo de aplicación móvil en Ionic\footnote{\url{https://ionicframework.com/}} que conectaba con el producto mediante llamadas HTTP realizadas directamente por
 el módulo http del core de Angular.
 \begin{code}
 \label{code:angularhttp}
@@ -528,13 +543,13 @@ public class JSONSerializer {
 \captionof{listing}{Implementación parcial de un singleton en Java para la (de)serialización de JSON}
 \end{code}
 \bigbreak
-Por otro lado, también hay que definir los objetos que van a contener los datos que pueden ser deserializados desde un JSON o serializados a este. Para ello, se define una clase un conjunto de atributos
+Por otro lado, también hay que definir los objetos que van a contener los datos que pueden ser deserializados desde un JSON o serializados a este. Para ello, se define una clase con un conjunto de atributos
 que serán los que contengan la información. Estos atributos tienen que ser vinculados empleando la etiqueta \verb~@SerializedName~ para que GSON pueda realizar la serialización
 o deserialización.
 \\
 \\
 El acceso y modificación de los atributos del objeto se realiza a través de métodos públicos get y set, habiendo uno de cada para cada atributo. Dado que Java es un lenguaje muy verboso y este tipo de implementaciones
-ocupan mucho espacio, se adjunta el código relazionado con el JSON de la llamada a la operación \emph{activateUser} en el \hyperref[code:android-json]{Anexo A}.
+ocupan mucho espacio, se adjunta el código relacionado con el JSON de la llamada a la operación \emph{activateUser} en el \hyperref[code:android-json]{Anexo A}.
 \subsubsection{Desarrollo de un servicio}
 \label{sec-4-1-3}
 Cada servicio de SME Pay cuenta con una interfaz del servicio, una \hyperref[code:androidcallback]{interfaz del callback} y una implementación del servicio en la librería desarrollada para Android.
@@ -578,7 +593,7 @@ como se ha mencionado anteriormente también tendrá que implementar el comporta
 \\
 \\
 En el siguiente \hyperref[code:android-implementation]{código} se puede observar
-la implementación de la función que llamada a la operación \emph{activateUser} del servicio register. Todo el código relacionado con la implementación de los servicios se entraga compilador en el fichero JAR que contiene
+la implementación de la función que llama a la operación \emph{activateUser} del servicio register. Todo el código relacionado con la implementación de los servicios se entrega compilado en el fichero JAR que contiene
 la librería, de manera que su funcionamiento interno queda oculto a los usuarios mientras no empleen decompiladores.
 \begin{code}
 \label{code:android-implementation}
@@ -647,7 +662,7 @@ Debido a que Objective-C no ofrece soporte nativo para JSON, se necesita impleme
 que como su nombre indica es un diccionario.
 \\
 \\
-La estructura de estas clases es muy sencillo, tan solo tienen un constructor al que se le pasan todos los parametros a serializar y dos métodos, para serializar y deserializar. También se tiene que definir
+La estructura de estas clases es muy sencilla, tan solo tienen un constructor al que se le pasan todos los parametros a serializar y dos métodos, para serializar y deserializar. También se tiene que definir
 estáticamente el nombre de los campos del JSON, de forma que estos se usen como las \emph{key} del diccionario.
 \begin{code}
 \label{code:ios-serializer}
@@ -732,10 +747,10 @@ estáticamente el nombre de los campos del JSON, de forma que estos se usen como
 \bigbreak
 \subsubsection{Desarrollo de un servicio}
 \label{sec-4-2-3}
-Para proceder a un desarrollo de una librería coherente con la estructura de SME Pay, se decidió diferenciar cada servicio de la misma forma. Así mismo, cada servicio contará con 3 ficheros.
+Para proceder al desarrollo de una librería coherente con la estructura de SME Pay, se decidió diferenciar cada servicio de la misma forma. Así mismo, cada servicio contará con 3 ficheros.
 \paragraph{Cabecera del servicio}
 \label{sec-4-2-3-1}
-Este fichero actuará como interfaz pública del servicio, proporcionando todos los métodos que proporciona el servicio, definiendo los tipos que empleará para el tratamiento de las respuestas y
+Este fichero actuará como interfaz pública del servicio, proporcionando todos los métodos que incluye el servicio, definiendo los tipos que empleará para el tratamiento de las respuestas y
 especificando que clases empleará para la serialización y deserialización de las llamadas y respuestas.
 \begin{code}
 \label{code:ios-interface-partial}
@@ -855,11 +870,11 @@ la extensión \verb~<file>.h~ y por otro la implementación, que en este caso si
 \bigbreak
 Debido a que el \hyperref[code:ios-implementation]{código} de la implementación de los servicios se proporciona compilado, tan solo se muestra la implementación de la llamada a la operación \emph{activateUser},
 para seguir el mismo ejemplo empleado durante el documento. Todas las llamadas siguen el mismo patrón de todos modos. En primer lugar se serializan los datos de la llamada a MOTIF, contemplando el caso en
-el que la serialización falle, de modo que se interrumpiría la ejecución. En caso de que la serialización se produzca con éxito, se realiza la llamada a MOTIF y se procesa la respuestá mediante el uso de
+el que la serialización falle, de modo que se interrumpiría la ejecución. En caso de que la serialización se produzca con éxito, se realiza la llamada a MOTIF y se procesa la respuesta mediante el uso de
 funciones inline.
 \\
 \\
-En el caso de la operación \emph{activateUser} no se recibe ningún tipo de información que deba ser deserializada, pero en el caso de las operaciones en lo que esto si ocurre, se deserializa en en la función inline
+En el caso de la operación \emph{activateUser} no se recibe ningún tipo de información que deba ser deserializada, pero en el caso de las operaciones en lo que esto si ocurre, se deserializa en la función inline
 correspondiente al éxito de la llamada, y se devuelve el objeto deserializado dentro del método \verb~successBlock()~.
 \subsection{Desarrollo del plugin para Cordova}
 \label{sec-4-3}
@@ -1137,7 +1152,7 @@ Las interfaces Javascript se ubican en la carpeta \verb~www~ del plugin de Cordo
 para comunicarse con el código nativo.
 \\
 \\
-Cada interfaz contiene un JSON que define todas las funciones, definiendo como parámetros un callback de éxito, un callback de fallo y una lista que contendra los datos a procesar por el código nativo. Estos parametros
+Cada interfaz contiene un JSON que define todas las funciones, definiendo como parámetros un callback de éxito, un callback de fallo y una lista que contendrá los datos a procesar por el código nativo. Estos parámetros
 son pasados a la función \verb~exec~ junto al nombre de la clase homóloga en código nativo y el nombre de la función a invocar.
 \\
 \\
@@ -1197,7 +1212,7 @@ Con la interfaz exportada, tan solo habrá que realizar una llamada a la operaci
 \label{sec-5}
 Tras el desarrollo de la solución híbrida he sacado las siguientes conclusiones:
 \begin{itemize}
-\item El desarrollo móvil nativo proporciona claras ventajas respecto a las soluciones híbridas basadas en el uso un navegador web embebido dentro de una aplicación. Sin duda el desarrollo híbrido abarata mucho los costes, ya que no es necesario que el desarrollador controle 2 lenguajes y sus librerías asociadas como sí sucede con la programación nativa, pero aun sin ser necesario el conocimiento de estas tecnologías no deja de ser recomendable de cara a la posibilidad de realizar desarrollos similares al ejecutado en el este Proyecto Fin de Grado.
+\item El desarrollo móvil nativo proporciona claras ventajas respecto a las soluciones híbridas basadas en el uso un navegador web embebido dentro de una aplicación. Sin duda el desarrollo híbrido abarata mucho los costes, ya que no es necesario que el desarrollador controle 2 lenguajes y sus librerías asociadas como sí sucede con la programación nativa, pero aun sin ser necesario el conocimiento de estas tecnologías no deja de ser recomendable de cara a la posibilidad de realizar desarrollos similares al ejecutado en este Proyecto Fin de Grado.
 \item Las empresas del sector financiero tienen un miedo relativo al cambio. A pesar de que invierten una gran cantidad de recursos en mejorar y renovar sus sistemas y tecnologías, el tamaño de estas empresas y su necesidad de seguridad las hace implementar cambios en el negocio con una velocidad insuficiente en muchos casos. En el caso de este proyecto, se exploró la posibilidad de realizar el desarrollo en los lenguajes modernos para desarrollo nativo (Kotlin y Swift), pero se terminó descartando la idea debido a que la inmensa mayoría de potenciales clientes finales emplean aun Java y Objective-C en sus aplicaciones, y a pesar de que estas tecnologías son compatibles entre ellas en un principio, se sienten más cómodos empleando librerías desarrolladas en los lenguajes usados por ellos.
 \end{itemize}
 \printbibliography[heading=bibnumbered] % Última sección, numerada, para la bibliografía
